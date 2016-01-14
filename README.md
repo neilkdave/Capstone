@@ -1,9 +1,9 @@
 # Capstone Project
-Teddy
-Sasha
-Sean
-Neil
-Amery
+### Teddy
+### Sasha
+### Sean
+### Neil
+### Amery
 
 ### Setup Instructions
 
