@@ -9,6 +9,11 @@ Clone the leap motion processing library  (https://github.com/nok/leap-motion-pr
 
 Create a symbolic link from the cloned leap motion processing library to a directory in the same folder called "LeapMotionForProcessing"
 
+Windows:
+'''
+mklink /j ...\libraries\LeapMotionForProcessing ...\libraries\leap-motion-processing
+'''
+
 ### Other Resources
 
 Processing Serial Documentation:
