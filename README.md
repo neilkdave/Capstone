@@ -5,9 +5,9 @@ Teddy, Sasha, Sean, Neil, Amery
 
 Clone this repository to your processing sketchbook location (File --> Preferences --> Sketchbook Location)
 
-Clone the leap motion processing library  (https://github.com/nok/leap-motion-processing) to your sketchbook location's libraries folder
+Clone the [Leap Motion Processing Library](https://github.com/nok/leap-motion-processing) to your sketchbook location's libraries folder
 
-Create a symbolic link from the cloned leap motion processing library to a directory in the same folder called "LeapMotionForProcessing"
+Create a symbolic link from "leap-motion-processing" to "LeapMotionForProcessing"
 
 Windows Symbolic Link Command:
 ```
