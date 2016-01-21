@@ -3,15 +3,75 @@ import de.voidplus.leapmotion.*;
 LeapMotion leap;
 
 void setup() {
-  size(800, 500, OPENGL);
+  size(800, 500, P3D);
   background(255);
   // ...
 
   leap = new LeapMotion(this);
 }
 
+// void setup() {
+//   size(640, 360, P3D);
+//   noStroke();
+// }
+
 void draw() {
-  background(255);
+  lights();
+  background(0);
+  float cameraY = height / 2.0;
+  float fov = PI/4;
+  float cameraZ = cameraY / tan(fov / 2.0);
+  // System.out.println(cameraZ);
+  float aspect = float(width) / float(height);
+  perspective(fov, aspect, cameraZ / 10.0, cameraZ * 10.0);
+  
+  translate(width / 2, height / 3, 0);
+  rotateX(-PI/8);
+  fill(255);
+  stroke(0);
+  box(width, height, max(width, height)); // draw world container
+
+  
+  translate(0, height / 2, -width / 2); // shift axis to bottom of back wall
+  
+  // flip y axis
+  scale(1, -1, 1);
+  
+  // draw origin box
+  fill(255);
+  stroke(0);
+  box(5);
+
+  // +X axis in Red
+  stroke(255, 0, 0);
+  line(0, 0, 0, 200, 0, 0);
+  // +Y axis in Green
+  stroke(0, 255, 0);
+  line(0, 0, 0, 0, 200, 0);
+  // +Z axis in Blue
+  stroke(0, 0, 255);
+  line(0, 0, 0, 0, 0, 200);
+
+  // get hands
+
+  // update physics and 
+
+  // physics
+
+  // draw objects
+
+}
+/*
+void draw() {
+  lights();
+  background(0);
+  float cameraY = height/2.0;
+  float fov = float(width) * PI/2;
+  float cameraZ = cameraY / tan(fov / 2.0);
+  float aspect = float(width)/float(height);
+  perspective(fov, aspect, cameraZ/10.0, cameraZ * 10.0);
+  translate(width/2, height/2, 0);
+  box(45);
   // ...
   int fps = leap.getFrameRate();
 
@@ -226,3 +286,4 @@ void leapOnDisconnect() {
 void leapOnExit() {
   // println("Leap Motion Exit");
 }
+//*/
