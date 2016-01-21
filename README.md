@@ -36,6 +36,8 @@ Then install the Sublime Text Processing Package (Preferences --> Package Contro
 
 Add Processing 3 folder to your System's PATH as shown [here](https://github.com/b-g/processing-sublime)
 
+Restart Sublime one more time
+
 Open the Capstone repository in Sublime and build the project (Tools --> Build)
 
 ### Other Resources
