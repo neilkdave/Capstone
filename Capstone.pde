@@ -7,6 +7,8 @@ void setup() {
   background(255);
   // ...
 
+  float maxX, minX, maxY, minY, maxZ, minZ;
+
   leap = new LeapMotion(this);
 }
 
@@ -38,7 +40,7 @@ void draw() {
   scale(1, -1, 1);
   
   // draw origin box
-  fill(255);
+  noFill();
   stroke(0);
   box(5);
 
@@ -52,11 +54,17 @@ void draw() {
   stroke(0, 0, 255);
   line(0, 0, 0, 0, 0, 200);
 
-  // get hands
+  int fps = leap.getFrameRate();
 
-  // update physics and 
+  // get hands
+  
+  // collisions
 
   // physics
+
+  // send updates to glove
+
+  // draw hands
 
   // draw objects
 
