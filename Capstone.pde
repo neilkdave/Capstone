@@ -5,10 +5,6 @@ LeapMotion leap;
 void setup() {
   size(800, 500, P3D);
   background(255);
-  // ...
-
-  float maxX, minX, maxY, minY, maxZ, minZ;
-
   leap = new LeapMotion(this);
 }
 
@@ -16,6 +12,15 @@ void setup() {
 //   size(640, 360, P3D);
 //   noStroke();
 // }
+
+/*
+maxX: 971.0079
+minX: -124.62537
+maxY: 492.07104
+minY: 0.0
+maxZ: 106.02615
+minZ: -23.31665
+//*/
 
 void draw() {
   lights();
