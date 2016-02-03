@@ -1,11 +1,14 @@
 import de.voidplus.leapmotion.*;
 
 LeapMotion leap;
+PVector leapWorld = new PVector(100, 100, 100);
 
 void setup() {
   size(800, 500, P3D);
   background(255);
   leap = new LeapMotion(this);
+  leap.setWorld((int) leapWorld.x, (int) leapWorld.y, (int) leapWorld.z); // width, height, depth
+  leap.moveWorld(-100, 100, 0); // x, y, z
 }
 
 // void setup() {
@@ -59,7 +62,42 @@ void draw() {
   stroke(0, 0, 255);
   line(0, 0, 0, 0, 0, 200);
 
-  int fps = leap.getFrameRate();
+  stroke(0);
+  fill(255);
+
+  pushMatrix();
+  scale(1, -1, -1);
+  // translate(leapWorld.x / 2, leapWorld.y / 2, leapWorld.z / 2);
+  // width height
+  translate(0, 0, 0);
+
+  ArrayList<Hand> hands = leap.getHands();
+
+  // System.out.println("Frame");
+  for (Hand hand : hands) {
+    handPosition = 
+    // System.out.println("Hand.x: " + hand.getId());
+    // System.out.println("Hand: " + hand.getId());
+    for (Finger finger : hand.getFingers()) {
+      // System.out.println("Finger: " + finger.getType());
+      for (int i = 0; i < 4; i++) {
+        // finger 0 is thumb, bone 3 on thumb is not real
+        Bone bone = finger.getBone(i);
+        // System.out.println("Bone: " + bone.getType());
+        PVector prevBone = bone.getPrevJoint();
+        PVector nextBone = bone.getNextJoint();
+        pushMatrix();
+        translate(nextBone.x, nextBone.y, nextBone.z);
+        box(15);
+        popMatrix();
+        // System.out.println("prevBone.x: " + prevBone.x);
+        // System.out.println("prevBone.y: " + prevBone.y);
+        // System.out.println("prevBone.z: " + prevBone.z);
+      }
+    }
+  }
+  popMatrix();
+  // int fps = leap.getFrameRate();
 
   // get hands
   
@@ -72,7 +110,6 @@ void draw() {
   // draw hands
 
   // draw objects
-
 }
 /*
 void draw() {
