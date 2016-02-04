@@ -2,13 +2,31 @@ import de.voidplus.leapmotion.*;
 
 LeapMotion leap;
 PVector leapWorld = new PVector(100, 100, 100);
+boolean fullScreenApp = true;
+
+void settings() {
+  if (fullScreenApp) {
+    fullScreen(P3D);
+  } 
+}
 
 void setup() {
-  size(800, 500, P3D);
+  if (!fullScreenApp) {
+    size(800, 450, P3D);
+    frame.setResizable(true);
+  }
+  
   background(255);
   leap = new LeapMotion(this);
-  leap.setWorld((int) leapWorld.x, (int) leapWorld.y, (int) leapWorld.z); // width, height, depth
-  leap.moveWorld(-100, 100, 0); // x, y, z
+  
+  // leap.moveWorld(-360, -360, -60); // need to move the world proportionally to the window size
+  // 800x500 (-360,-360,-60)
+
+  leap.moveWorld(parseInt((-1.0/2.0) * width), parseInt((-3.0/4.0) * height), parseInt((-1.0/15.0) * max(height, width))); // need to move the world proportionally to the window size
+  // 1600x900 (-720,-720,-120)
+  
+  // is roughly -900 to 900 in x 
+  // is roughly 
 }
 
 // void setup() {
@@ -69,13 +87,16 @@ void draw() {
   scale(1, -1, -1);
   // translate(leapWorld.x / 2, leapWorld.y / 2, leapWorld.z / 2);
   // width height
-  translate(0, 0, 0);
+  // translate(0, 0, 0);
 
   ArrayList<Hand> hands = leap.getHands();
 
   // System.out.println("Frame");
   for (Hand hand : hands) {
-    handPosition = 
+    PVector handPosition = hand.getPosition();
+    System.out.println("handPosition.x: " + handPosition.x);
+    System.out.println("handPosition.y: " + handPosition.y);
+    System.out.println("handPosition.z: " + handPosition.z);
     // System.out.println("Hand.x: " + hand.getId());
     // System.out.println("Hand: " + hand.getId());
     for (Finger finger : hand.getFingers()) {
@@ -87,7 +108,7 @@ void draw() {
         PVector prevBone = bone.getPrevJoint();
         PVector nextBone = bone.getNextJoint();
         pushMatrix();
-        translate(nextBone.x, nextBone.y, nextBone.z);
+        translate(nextBone.x, nextBone.y, nextBone.z * 6);
         box(15);
         popMatrix();
         // System.out.println("prevBone.x: " + prevBone.x);
