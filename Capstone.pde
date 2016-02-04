@@ -1,17 +1,151 @@
 import de.voidplus.leapmotion.*;
 
 LeapMotion leap;
+PVector leapWorld = new PVector(100, 100, 100);
+boolean fullScreenApp = true;
 
-void setup() {
-  size(800, 500, OPENGL);
-  background(255);
-  // ...
-
-  leap = new LeapMotion(this);
+void settings() {
+  if (fullScreenApp) {
+    fullScreen(P3D);
+  } 
+  else {
+    size(800, 450, P3D);
+  }
 }
 
-void draw() {
+void setup() {
   background(255);
+  leap = new LeapMotion(this);
+  
+  // leap.moveWorld(-360, -360, -60); // need to move the world proportionally to the window size
+  // 800x500 (-360,-360,-60)
+
+  leap.moveWorld(parseInt((-1.0/2.0) * width), parseInt((-3.0/4.0) * height), parseInt((-1.0/15.0) * max(height, width))); // need to move the world proportionally to the window size
+  // 1600x900 (-720,-720,-120)
+  
+  // is roughly -900 to 900 in x 
+  // is roughly 
+}
+
+// void setup() {
+//   size(640, 360, P3D);
+//   noStroke();
+// }
+
+/*
+maxX: 971.0079
+minX: -124.62537
+maxY: 492.07104
+minY: 0.0
+maxZ: 106.02615
+minZ: -23.31665
+//*/
+
+void draw() {
+  ambientLight(102, 102, 102);
+  directionalLight(126, 126, 126, 0, height / 2, height / 2);
+  background(0);
+  float cameraY = height / 2.0;
+  float fov = PI/4;
+  float cameraZ = cameraY / tan(fov / 2.0);
+  // System.out.println(cameraZ);
+  float aspect = float(width) / float(height);
+  perspective(fov, aspect, cameraZ / 10.0, cameraZ * 10.0);
+  
+  translate(width / 2, height / 3, 0);
+  rotateX(-PI/8);
+  fill(255);
+  stroke(0);
+  box(width, height, max(width, height)); // draw world container
+
+  
+  translate(0, height / 2, -width / 2); // shift axis to bottom of back wall
+  
+  // flip y axis
+  scale(1, -1, 1);
+  
+  // draw origin box
+  noFill();
+  stroke(0);
+  box(5);
+
+  // +X axis in Red
+  stroke(255, 0, 0);
+  line(0, 0, 0, 200, 0, 0);
+  // +Y axis in Green
+  stroke(0, 255, 0);
+  line(0, 0, 0, 0, 200, 0);
+  // +Z axis in Blue
+  stroke(0, 0, 255);
+  line(0, 0, 0, 0, 0, 200);
+
+  stroke(0);
+  fill(255);
+
+  pushMatrix();
+  scale(1, -1, -1);
+  // translate(leapWorld.x / 2, leapWorld.y / 2, leapWorld.z / 2);
+  // width height
+  // translate(0, 0, 0);
+
+  ArrayList<Hand> hands = leap.getHands();
+
+  // for drawing spheres in space
+  sphereDetail(8);
+  noStroke();
+  fill(255);
+  // System.out.println("Frame");
+  for (Hand hand : hands) {
+    PVector handPosition = hand.getPosition();
+    System.out.println("handPosition.x: " + handPosition.x);
+    System.out.println("handPosition.y: " + handPosition.y);
+    System.out.println("handPosition.z: " + handPosition.z);
+    // System.out.println("Hand.x: " + hand.getId());
+    // System.out.println("Hand: " + hand.getId());
+    for (Finger finger : hand.getFingers()) {
+      // System.out.println("Finger: " + finger.getType());
+      for (int i = 0; i < 4; i++) {
+        // finger 0 is thumb, bone 3 on thumb is not real
+        Bone bone = finger.getBone(i);
+        // System.out.println("Bone: " + bone.getType());
+        PVector prevBone = bone.getPrevJoint();
+        PVector nextBone = bone.getNextJoint();
+        pushMatrix();
+        translate(nextBone.x, nextBone.y, nextBone.z * 6);
+        sphere(15);
+        popMatrix();
+        // System.out.println("prevBone.x: " + prevBone.x);
+        // System.out.println("prevBone.y: " + prevBone.y);
+        // System.out.println("prevBone.z: " + prevBone.z);
+      }
+    }
+  }
+  popMatrix();
+  // int fps = leap.getFrameRate();
+
+  // get hands
+  
+  // collisions
+
+  // physics
+
+  // send updates to glove
+
+  // draw hands
+
+  // draw objects
+}
+/*
+void draw() {
+  lights();
+  background(0);
+  float cameraY = height/2.0;
+  float fov = float(width) * PI/2;
+  float cameraZ = cameraY / tan(fov / 2.0);
+  float aspect = float(width)/float(height);
+  perspective(fov, aspect, cameraZ/10.0, cameraZ * 10.0);
+  translate(width/2, height/2, 0);
+  box(45);
   // ...
   int fps = leap.getFrameRate();
 
@@ -226,3 +360,4 @@ void leapOnDisconnect() {
 void leapOnExit() {
   // println("Leap Motion Exit");
 }
+//*/
