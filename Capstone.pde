@@ -8,14 +8,12 @@ void settings() {
   if (fullScreenApp) {
     fullScreen(P3D);
   } 
+  else {
+    size(800, 450, P3D);
+  }
 }
 
 void setup() {
-  if (!fullScreenApp) {
-    size(800, 450, P3D);
-    frame.setResizable(true);
-  }
-  
   background(255);
   leap = new LeapMotion(this);
   
@@ -44,7 +42,8 @@ minZ: -23.31665
 //*/
 
 void draw() {
-  lights();
+  ambientLight(102, 102, 102);
+  directionalLight(126, 126, 126, 0, height / 2, height / 2);
   background(0);
   float cameraY = height / 2.0;
   float fov = PI/4;
@@ -91,6 +90,10 @@ void draw() {
 
   ArrayList<Hand> hands = leap.getHands();
 
+  // for drawing spheres in space
+  sphereDetail(8);
+  noStroke();
+  fill(255);
   // System.out.println("Frame");
   for (Hand hand : hands) {
     PVector handPosition = hand.getPosition();
@@ -109,7 +112,7 @@ void draw() {
         PVector nextBone = bone.getNextJoint();
         pushMatrix();
         translate(nextBone.x, nextBone.y, nextBone.z * 6);
-        box(15);
+        sphere(15);
         popMatrix();
         // System.out.println("prevBone.x: " + prevBone.x);
         // System.out.println("prevBone.y: " + prevBone.y);
