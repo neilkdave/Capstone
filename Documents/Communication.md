@@ -4,9 +4,9 @@
 ```
 (OpCode)(Version)(Payload)
 ```
-..* OpCode: Single Hex Character (1-F, 0 reserved)
-..* Version: Single Hex Character (0-F)
-..* Payload: OpCode and Version Specific
+* OpCode: Single Hex Character (1-F, 0 reserved)
+* Version: Single Hex Character (0-F)
+* Payload: OpCode and Version Specific
 
 ### Versions
 #### Version 1
