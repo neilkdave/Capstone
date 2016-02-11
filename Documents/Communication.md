@@ -10,7 +10,7 @@
 
 ## Versions
 ### Version 1
-Our First Version! Likely unstable because we will do most of our development work here. Make sure to update to master for both Arduion and Processing.
+Our First Version! Likely unstable because we will do most of our development work here. Make sure to update to master for both Arduino and Processing.
 #### OpCodes
 1. Set Inflation State
   * Payload Length: 9 Characters
