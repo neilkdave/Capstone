@@ -1,8 +1,10 @@
 import de.voidplus.leapmotion.*;
 
+boolean fullScreenApp = true;
+
 LeapMotion leap;
 PVector leapWorld = new PVector(100, 100, 100);
-boolean fullScreenApp = true;
+float leapZScalar = 6;
 
 void settings() {
   if (fullScreenApp) {
@@ -110,9 +112,14 @@ void draw() {
         // System.out.println("Bone: " + bone.getType());
         PVector prevBone = bone.getPrevJoint();
         PVector nextBone = bone.getNextJoint();
+        prevBone.z = prevBone.z * leapZScalar;
+        nextBone.z = nextBone.z * leapZScalar;
+        if (i != 3) {
+          drawCylinder(prevBone, nextBone, 10, 12); // p1, p2, radius, detail
+        }
         pushMatrix();
-        translate(nextBone.x, nextBone.y, nextBone.z * 6);
-        sphere(15);
+        translate(nextBone.x, nextBone.y, nextBone.z);
+        sphere(20);
         popMatrix();
         // System.out.println("prevBone.x: " + prevBone.x);
         // System.out.println("prevBone.y: " + prevBone.y);
@@ -135,6 +142,32 @@ void draw() {
 
   // draw objects
 }
+
+void drawCylinder(PVector p1, PVector p2, int cylinderRadius, int cylinderDetail) {
+  PVector pTranslated = PVector.sub(p2, p1);
+  float cylinderLength = pTranslated.mag();
+  float stepSize = TWO_PI / cylinderDetail;
+  pushMatrix();
+  
+  translate(p1.x, p1.y, p1.z);
+  rotateY(-atan2((pTranslated.z), (pTranslated.x)));
+  rotateZ(atan2((pTranslated.y), sqrt(pow(pTranslated.x, 2) + pow(pTranslated.z, 2))));
+  // stroke(0);
+  // line(0, 0, 0, cylinderLength, 0, 0);
+  
+  beginShape(TRIANGLE_STRIP);
+  for (int i = 0; i <= cylinderDetail; i++) {
+    float y = cos(i * stepSize) * cylinderRadius;
+    float z = sin(i * stepSize) * cylinderRadius;
+    vertex(0, y, z);
+    vertex(cylinderLength, y, z);
+  }
+  endShape(CLOSE);
+  
+  popMatrix();
+  // noStroke();
+}
+
 /*
 void draw() {
   lights();
