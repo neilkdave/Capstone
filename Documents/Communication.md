@@ -1,6 +1,6 @@
 # Communication
 
-### Serial Communication Structure
+## Serial Communication Structure
 ```
 (OpCode)(Version)(Payload)
 ```
@@ -8,9 +8,9 @@
 * Version: Single Hex Character (0-F)
 * Payload: OpCode and Version Specific
 
-### Versions
-#### Version 1
-##### OpCodes
+## Versions
+### Version 1
+#### OpCodes
 1. Set Inflation State
   * Payload Length: 9 Characters
   * Payload: Each bite represents the inflation state of a single pouch. 0 is deflated F is fully inflated.
