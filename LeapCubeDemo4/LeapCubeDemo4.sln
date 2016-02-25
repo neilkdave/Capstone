@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2015
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeapCubeDemo4.CSharp", "LeapCubeDemo4.CSharp.csproj", "{4995C3CD-B194-85F5-8217-7FD0070ABB6E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LeapCubeDemo4.CSharp.Editor", "LeapCubeDemo4.CSharp.Editor.csproj", "{DA432F9E-8552-7283-9D3B-C8A5382A834A}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4995C3CD-B194-85F5-8217-7FD0070ABB6E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4995C3CD-B194-85F5-8217-7FD0070ABB6E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4995C3CD-B194-85F5-8217-7FD0070ABB6E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4995C3CD-B194-85F5-8217-7FD0070ABB6E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA432F9E-8552-7283-9D3B-C8A5382A834A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA432F9E-8552-7283-9D3B-C8A5382A834A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA432F9E-8552-7283-9D3B-C8A5382A834A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA432F9E-8552-7283-9D3B-C8A5382A834A}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
