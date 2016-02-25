@@ -1,7 +1,10 @@
 import com.leapmotion.leap.*;
 
-boolean fullScreenApp = true;
+
+boolean fullScreenApp = false;
 Controller controller = new Controller();
+Communicator communicator = new Communicator();
+InputHandler inputHandler = new InputHandler(communicator);
 
 void settings() {
   if (fullScreenApp) {
@@ -14,6 +17,10 @@ void settings() {
 
 void setup() {
   // Setup things here
+}
+
+void keyPressed() {
+  inputHandler.handleKeystroke(key);
 }
 
 //*
