@@ -1,228 +1,186 @@
-import de.voidplus.leapmotion.*;
+import com.leapmotion.leap.*;
 
-LeapMotion leap;
+boolean fullScreenApp = true;
+Controller controller = new Controller();
+
+void settings() {
+  if (fullScreenApp) {
+    fullScreen(P3D);
+  } 
+  else {
+    size(800, 450, P3D);
+  }
+}
 
 void setup() {
-  size(800, 500, OPENGL);
-  background(255);
-  // ...
-
-  leap = new LeapMotion(this);
+  // Setup things here
 }
 
+//*
 void draw() {
-  background(255);
-  // ...
-  int fps = leap.getFrameRate();
+  ambientLight(102, 102, 102);
+  directionalLight(126, 126, 126, 0, height / 2, height / 2);
+  background(0);
+  
+  Frame frame = controller.frame();
+  
+  float cameraY = height / 2.0;
+  float fov = PI/4;
+  float cameraZ = cameraY / tan(fov / 2.0);
+  float aspect = float(width) / float(height);
+  perspective(fov, aspect, cameraZ / 10.0, cameraZ * 10.0);
+  
+  translate(width / 2, height / 3, 0);
+  rotateX(-PI/8);
+  fill(255);
+  stroke(0);
+  box(width, height, max(width, height)); // draw world container
+
+  
+  translate(0, height / 2, -width / 2); // shift axis to bottom of back wall
+  
+  // flip y axis
+  scale(1, -1, 1);
+  
+  // draw origin box
+  noFill();
+  stroke(0);
+  box(5);
+
+  // +X axis in Red
+  stroke(255, 0, 0);
+  line(0, 0, 0, 200, 0, 0);
+  // +Y axis in Green
+  stroke(0, 255, 0);
+  line(0, 0, 0, 0, 200, 0);
+  // +Z axis in Blue
+  stroke(0, 0, 255);
+  line(0, 0, 0, 0, 0, 200);
+
+  stroke(0);
+  fill(255);
+
+  pushMatrix();
+  
+  // proportional to window width so we scale hands the same amount based on window size
+  // height doesn't matter because gravity will bring objects down as needed
+  // default interaction box is 235 mm wide
+  float handScaler = width / 470;
 
 
-  // ========= HANDS =========
+  int handSphereSize = width / 100;
+  int handSphereDetail = 12;
+  int handCylinderSize = (handSphereSize * 2) / 3;
+  int handCylinderDetail = 12;
+  
 
-  for (Hand hand : leap.getHands ()) {
+  // offsets are in millimeters
+  // do not move x axis
+  // move y axis down so we can reach the floor of the box
+  // move z axis forward so the zero is in the center of the box
+  PVector leapOffset = new PVector(0, -150, 100);
 
-
-    // ----- BASICS -----
-
-    int     hand_id          = hand.getId();
-    PVector hand_position    = hand.getPosition();
-    PVector hand_stabilized  = hand.getStabilizedPosition();
-    PVector hand_direction   = hand.getDirection();
-    PVector hand_dynamics    = hand.getDynamics();
-    float   hand_roll        = hand.getRoll();
-    float   hand_pitch       = hand.getPitch();
-    float   hand_yaw         = hand.getYaw();
-    boolean hand_is_left     = hand.isLeft();
-    boolean hand_is_right    = hand.isRight();
-    float   hand_grab        = hand.getGrabStrength();
-    float   hand_pinch       = hand.getPinchStrength();
-    float   hand_time        = hand.getTimeVisible();
-    PVector sphere_position  = hand.getSpherePosition();
-    float   sphere_radius    = hand.getSphereRadius();
-
-
-    // ----- SPECIFIC FINGER -----
-
-    Finger  finger_thumb     = hand.getThumb();
-    // or                      hand.getFinger("thumb");
-    // or                      hand.getFinger(0);
-
-    Finger  finger_index     = hand.getIndexFinger();
-    // or                      hand.getFinger("index");
-    // or                      hand.getFinger(1);
-
-    Finger  finger_middle    = hand.getMiddleFinger();
-    // or                      hand.getFinger("middle");
-    // or                      hand.getFinger(2);
-
-    Finger  finger_ring      = hand.getRingFinger();
-    // or                      hand.getFinger("ring");
-    // or                      hand.getFinger(3);
-
-    Finger  finger_pink      = hand.getPinkyFinger();
-    // or                      hand.getFinger("pinky");
-    // or                      hand.getFinger(4);        
-
-
-    // ----- DRAWING -----
-
-    hand.draw();
-    // hand.drawSphere();
-
-
-    // ========= ARM =========
-
-    if (hand.hasArm()) {
-      Arm     arm               = hand.getArm();
-      float   arm_width         = arm.getWidth();
-      PVector arm_wrist_pos     = arm.getWristPosition();
-      PVector arm_elbow_pos     = arm.getElbowPosition();
-    }
-
-
-    // ========= FINGERS =========
-
-    for (Finger finger : hand.getFingers()) {
-      // Alternatives:
-      // hand.getOutstrechtedFingers();
-      // hand.getOutstrechtedFingersByAngle();
-
-      // ----- BASICS -----
-
-      int     finger_id         = finger.getId();
-      PVector finger_position   = finger.getPosition();
-      PVector finger_stabilized = finger.getStabilizedPosition();
-      PVector finger_velocity   = finger.getVelocity();
-      PVector finger_direction  = finger.getDirection();
-      float   finger_time       = finger.getTimeVisible();
-
-
-      // ----- SPECIFIC FINGER -----
-
-      switch(finger.getType()) {
-      case 0:
-        // System.out.println("thumb");
-        break;
-      case 1:
-        // System.out.println("index");
-        break;
-      case 2:
-        // System.out.println("middle");
-        break;
-      case 3:
-        // System.out.println("ring");
-        break;
-      case 4:
-        // System.out.println("pinky");
-        break;
-      }
-
-
-      // ----- SPECIFIC BONE -----
-
-      Bone    bone_distal       = finger.getDistalBone();
-      // or                       finger.get("distal");
-      // or                       finger.getBone(0);
-
-      Bone    bone_intermediate = finger.getIntermediateBone();
-      // or                       finger.get("intermediate");
-      // or                       finger.getBone(1);
-
-      Bone    bone_proximal     = finger.getProximalBone();
-      // or                       finger.get("proximal");
-      // or                       finger.getBone(2);
-
-      Bone    bone_metacarpal   = finger.getMetacarpalBone();
-      // or                       finger.get("metacarpal");
-      // or                       finger.getBone(3);
-
-
-      // ----- DRAWING -----
-
-      // finger.draw(); // = drawLines()+drawJoints()
-      // finger.drawLines();
-      // finger.drawJoints();
-
-
-      // ----- TOUCH EMULATION -----
-
-      int     touch_zone        = finger.getTouchZone();
-      float   touch_distance    = finger.getTouchDistance();
-
-      switch(touch_zone) {
-      case -1: // None
-        break;
-      case 0: // Hovering
-        // println("Hovering (#"+finger_id+"): "+touch_distance);
-        break;
-      case 1: // Touching
-        // println("Touching (#"+finger_id+")");
-        break;
-      }
-    }
-
-
-    // ========= TOOLS =========
-
-    for (Tool tool : hand.getTools ()) {
-
-
-      // ----- BASICS -----
-
-      int     tool_id           = tool.getId();
-      PVector tool_position     = tool.getPosition();
-      PVector tool_stabilized   = tool.getStabilizedPosition();
-      PVector tool_velocity     = tool.getVelocity();
-      PVector tool_direction    = tool.getDirection();
-      float   tool_time         = tool.getTimeVisible();
-
-
-      // ----- DRAWING -----
-
-      // tool.draw();
-
-
-      // ----- TOUCH EMULATION -----
-
-      int     touch_zone        = tool.getTouchZone();
-      float   touch_distance    = tool.getTouchDistance();
-
-      switch(touch_zone) {
-      case -1: // None
-        break;
-      case 0: // Hovering
-        // println("Hovering (#"+tool_id+"): "+touch_distance);
-        break;
-      case 1: // Touching
-        // println("Touching (#"+tool_id+")");
-        break;
+  PVector lastHandJoint = null;
+  PVector firstHandJoint = null;
+  sphereDetail(handSphereDetail);
+  noStroke();
+  fill(255);
+  HandList hands = frame.hands();
+  for (Hand hand : hands) {
+    lastHandJoint = null;
+    for (Finger finger : hand.fingers()) {
+      for(Bone.Type boneType : Bone.Type.values()) {
+        Bone bone = finger.bone(boneType);
+        PVector prevBone = PVector.mult(PVector.add(vectorToPVector(bone.prevJoint()), leapOffset), handScaler);
+        PVector nextBone = PVector.mult(PVector.add(vectorToPVector(bone.nextJoint()), leapOffset), handScaler);
+        if ((boneTypeToInt(boneType) - parseInt(fingerTypeToInt(finger.type()) == 0)) <= 2) {
+          // TODO: change to something related to window width
+          drawCylinder(prevBone, nextBone, handCylinderSize, handCylinderDetail); // p1, p2, radius, detail
+        }
+        if ((boneTypeToInt(boneType) - parseInt(fingerTypeToInt(finger.type()) == 0)) <= 3) {
+          pushMatrix();
+          translate(nextBone.x, nextBone.y, nextBone.z);
+          sphere(handSphereSize); // TODO: change to something related to window width
+          popMatrix();
+        }
+        if ((boneTypeToInt(boneType)) == 3) {
+          if (lastHandJoint != null) {
+            drawCylinder(lastHandJoint, nextBone, handCylinderSize, handCylinderDetail);
+          }
+          if (fingerTypeToInt(finger.type()) == 0) {
+            firstHandJoint = nextBone;
+          }
+          lastHandJoint = nextBone;
+        }
+        if (((fingerTypeToInt(finger.type())) == 4) && (boneTypeToInt(boneType) == 3)) {
+          drawCylinder(prevBone, nextBone, handCylinderSize, handCylinderDetail);
+          drawCylinder(firstHandJoint, prevBone, handCylinderSize, handCylinderDetail);pushMatrix();
+          translate(prevBone.x, prevBone.y, prevBone.z);
+          sphere(handSphereSize); // TODO: change to something related to window width
+          popMatrix();
+        }
       }
     }
   }
 
+  popMatrix();
+}
 
-  // ========= DEVICES =========
+PVector vectorToPVector(Vector vector) {
+  return new PVector(vector.getX(), vector.getY(), vector.getZ());
+}
 
-  for (Device device : leap.getDevices ()) {
-    float device_horizontal_view_angle = device.getHorizontalViewAngle();
-    float device_verical_view_angle = device.getVerticalViewAngle();
-    float device_range = device.getRange();
+int boneTypeToInt(Bone.Type boneType) {
+  switch (boneType.toString()) {
+    case "TYPE_DISTAL":
+        return 0;
+    case "TYPE_INTERMEDIATE":
+        return 1;
+    case "TYPE_PROXIMAL":
+        return 2;
+    case "TYPE_METACARPAL":
+        return 3;
   }
+  return -1;
 }
 
-// ========= CALLBACKS =========
+int fingerTypeToInt(Finger.Type fingerType) {
+  switch (fingerType.toString()) {
+    case "TYPE_THUMB":
+        return 0;
+    case "TYPE_INDEX":
+        return 1;
+    case "TYPE_MIDDLE":
+        return 2;
+    case "TYPE_RING":
+        return 3;
+    case "TYPE_PINKY":
+        return 4;
+  }
+  return -1;
+}
 
-void leapOnInit() {
-  // println("Leap Motion Init");
-}
-void leapOnConnect() {
-  // println("Leap Motion Connect");
-}
-void leapOnFrame() {
-  // println("Leap Motion Frame");
-}
-void leapOnDisconnect() {
-  // println("Leap Motion Disconnect");
-}
-void leapOnExit() {
-  // println("Leap Motion Exit");
+void drawCylinder(PVector p1, PVector p2, int cylinderRadius, int cylinderDetail) {
+  PVector pTranslated = PVector.sub(p2, p1);
+  float cylinderLength = pTranslated.mag();
+  float stepSize = TWO_PI / cylinderDetail;
+  pushMatrix();
+  
+  translate(p1.x, p1.y, p1.z);
+  rotateY(-atan2((pTranslated.z), (pTranslated.x)));
+  rotateZ(atan2((pTranslated.y), sqrt(pow(pTranslated.x, 2) + pow(pTranslated.z, 2))));
+  // stroke(0);
+  // line(0, 0, 0, cylinderLength, 0, 0);
+  
+  beginShape(TRIANGLE_STRIP);
+  for (int i = 0; i <= cylinderDetail; i++) {
+    float y = cos(i * stepSize) * cylinderRadius;
+    float z = sin(i * stepSize) * cylinderRadius;
+    vertex(0, y, z);
+    vertex(cylinderLength, y, z);
+  }
+  endShape(CLOSE);
+  
+  popMatrix();
+  // noStroke();
 }
