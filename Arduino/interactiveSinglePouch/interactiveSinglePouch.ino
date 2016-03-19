@@ -10,10 +10,10 @@ const unsigned short maintainPressure = 250;
 const int motorControlPin = 36;
 
 char command[20];
-unsigned short val;
+long val;
 
-const int inflatePin = 13;
-const int deflatePin = 12;
+const int inflatePin = 34;
+const int deflatePin = 35;
 
 unsigned long previousMillis = 0;
 unsigned long previousMotorChange = 0;
@@ -23,7 +23,7 @@ void setup() {
   pinMode(inflatePin, OUTPUT);
   pinMode(deflatePin, OUTPUT);
   pinMode(motorControlPin, OUTPUT);
-  controlState = StateDeflateWait;
+  Serial.println("Ready");
 }
 
 void loop() {
@@ -35,23 +35,26 @@ void loop() {
   
   if (Serial.available())
   {
-    Serial.readBytesUntil('\n', command, 20);
-    val = atoi(command);
+    int n;
+    n = Serial.readBytesUntil('\n', command, 20);
+    command[n] = '\0';
+    Serial.println(command);
+    val = atol(command);
     Serial.println(val);
-    /*
     if (val == 0)
     {
       digitalWrite(inflatePin, LOW);
       digitalWrite(deflatePin, HIGH);
     }
-    else if (val < 10)
+    else
     {
+      Serial.println("Write High");
       digitalWrite(deflatePin, LOW);
       digitalWrite(inflatePin, HIGH);
       delay(val);
       digitalWrite(inflatePin, LOW);
+      Serial.println("Write Low");
     }
-    */
   }
   
   // Control for output pressure
