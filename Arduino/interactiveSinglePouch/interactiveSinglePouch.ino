@@ -4,30 +4,12 @@
  1-9 inflate the pouch, for 10 * i milliseconds
  */
 
-int pressureReadPin = 15;
+int pressureReadPin = 14;
 const unsigned short maintainPressure = 250;
 
-const int motorControlPin = 9;
+const int motorControlPin = 36;
 
-const long inflateInterval = 200;
-const long inflateWaitInterval     = 2000;
-const long deflateInterval = 2000;
-const long deflateWaitInterval     = 2000;
-
-enum ControlStates_t
-{
-  StateInflate = 0,
-  StateInflateWait,
-  StateDeflate,
-  StateDeflateWait,
-};
-
-ControlStates_t controlState = StateInflate;
-
-int inflateState = LOW;
-int deflateState = LOW;
-
-char command;
+char command[20];
 unsigned short val;
 
 const int inflatePin = 13;
@@ -53,8 +35,10 @@ void loop() {
   
   if (Serial.available())
   {
-    command = Serial.read();
-    val = command - '0';
+    Serial.readBytesUntil('\n', command, 20);
+    val = atoi(command);
+    Serial.println(val);
+    /*
     if (val == 0)
     {
       digitalWrite(inflatePin, LOW);
@@ -64,9 +48,10 @@ void loop() {
     {
       digitalWrite(deflatePin, LOW);
       digitalWrite(inflatePin, HIGH);
-      delay(10 * val);
+      delay(val);
       digitalWrite(inflatePin, LOW);
     }
+    */
   }
   
   // Control for output pressure
