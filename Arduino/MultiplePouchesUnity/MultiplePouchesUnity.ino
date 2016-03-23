@@ -1,3 +1,5 @@
+#include <SerialCommand.h>
+
 /*
  Interactive mode responds to single characters in the serial input
  0 deflates the pouch
@@ -12,16 +14,41 @@ const int motorControlPin = 38;
 char command[20];
 long val;
 
-const int inflatePin = 36;
-const int deflatePin = 37;
+const int inflatePin1 = 28;
+const int deflatePin1 = 29;
+const int inflatePin2 = 30;
+const int deflatePin2 = 31;
+const int inflatePin3 = 32;
+const int deflatePin3 = 33;
+const int inflatePin4 = 34;
+const int deflatePin4 = 35;
+const int inflatePin5 = 36;
+const int deflatePin5 = 37;
+
 
 unsigned long previousMillis = 0;
 unsigned long previousMotorChange = 0;
 
 void setup() {
   Serial.begin(9600);
-  pinMode(inflatePin, OUTPUT);
-  pinMode(deflatePin, OUTPUT);
+  
+ while (!Serial);
+ 
+  sCmd.addCommand("17800", pouch1Handler);
+  sCmd.addCommand("17800", pouch2Handler);
+  sCmd.addCommand("17800", pouch3Handler);
+ 
+  pinMode(inflatePin1, OUTPUT);
+  pinMode(deflatePin1, OUTPUT);
+  pinMode(inflatePin2, OUTPUT);
+  pinMode(deflatePin2, OUTPUT);
+  pinMode(inflatePin3, OUTPUT);
+  pinMode(deflatePin3, OUTPUT);
+  pinMode(inflatePin4, OUTPUT);
+  pinMode(deflatePin4, OUTPUT);
+  pinMode(inflatePin5, OUTPUT);
+  pinMode(deflatePin5, OUTPUT);
+
   pinMode(motorControlPin, OUTPUT);
   Serial.println("Ready");
 }
@@ -43,16 +70,16 @@ void loop() {
     Serial.println(val);
     if (val == 0)
     {
-      digitalWrite(inflatePin, LOW);
-      digitalWrite(deflatePin, HIGH);
+      digitalWrite(inflatePin5, LOW);
+      digitalWrite(deflatePin5, HIGH);
     }
     else
     {
       Serial.println("Write High");
-      digitalWrite(deflatePin, LOW);
-      digitalWrite(inflatePin, HIGH);
+      digitalWrite(deflatePin5, LOW);
+      digitalWrite(inflatePin5, HIGH);
       delay(val);
-      digitalWrite(inflatePin, LOW);
+      digitalWrite(inflatePin5, LOW);
       Serial.println("Write Low");
     }
   }
