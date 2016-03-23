@@ -5,26 +5,22 @@ using System.IO.Ports;
 using Leap;
 
 public class OnCollision : MonoBehaviour {
-    //blic Text grabbedText;
-    public int digitCollision = 0;
 
+    public int digitValue;
+    
     void OnCollisionEnter(Collision collision)
     {
-        digitCollision = 1;
-       // grabbedText.text = "Grabbed: 1";
+        Serial_Comm.Instance.collisionArray[digitValue + 1] = 8;
     }
 
     void OnCollisionStay(Collision collision)
     {
-        digitCollision = 1;
-        
+        Serial_Comm.Instance.collisionArray[digitValue + 1] = 8;
     }
 
     void OnCollisionExit(Collision collision)
     {
-        digitCollision = 0;
+        Serial_Comm.Instance.collisionArray[digitValue + 1] = 0;
     }
-
- 
 
 }
