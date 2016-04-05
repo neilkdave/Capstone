@@ -1,13 +1,16 @@
 const int motorControlPin = 38; // pumpEnable on breadboard // TODO: Remove after assembly 
 const int pumpEnable = 53; // pumpEnable on schematic
-const int numPouches = 15; // TODO: Change to 13?
+const int numPouches = 13; // TODO: Change to 13?
 const int pouchPinOffset = 22;
 const int minPouchDelay = 5400; // TODO: Verify this is smallest imperceptible delay 
 const int pressureReadPin = 14; // Breadboard pin 
 unsigned short currentTankPressure;
 unsigned long currentTime;
+unsigned long loopTime;
+
 int current[numPouches] = {0};
 int target[numPouches] = {0};
+bool valve[numPouches]; // true = inflate, false deflate
 
 const int maxOffset = 10;
 const int minOffset = -10;
@@ -23,7 +26,7 @@ bool inflating = false;
 
 int calculatedDeflate;
 int calculatedInflate;
-char messageBody[numPouches];
+char messageBody[numPouches + 3];
 char command;
 char protocolVersion;
 // TODO:  Populate pin arrays
@@ -96,11 +99,17 @@ void setup() {
 
 void loop() {
   currentTime = micros();
+  Serial.println(currentTime - loopTime);
+  loopTime = currentTime;
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // closes valves if done
     if (busy[pouchCounter] && (done[pouchCounter] < currentTime)) {
       busy[pouchCounter] = false;
-      digitalWrite(inflatePins[pouchCounter], LOW);
-      digitalWrite(deflatePins[pouchCounter], LOW); // Lazy could only close open valve
+      if (valve[pouchCounter]) {
+        digitalWrite(inflatePins[pouchCounter], LOW);
+      }
+      else {
+        digitalWrite(deflatePins[pouchCounter], LOW);
+      }
     }
   }
 
@@ -112,18 +121,21 @@ void loop() {
       if (offset > maxOffset) {
         calculatedDeflate = 8000; // TODO: Define more concrete calculations 
         busy[pouchCounter] = true;
-        done[pouchCounter] = micros() + calculatedInflate;
+        valve[pouchCounter] = false;
+        done[pouchCounter] = micros() + calculatedDeflate;
         digitalWrite(deflatePins[pouchCounter], HIGH);
       }
       else if (offset < minOffset) {
         calculatedInflate = 8000; // TODO: Define more concrete calculations 
         busy[pouchCounter] = true;
+        valve[pouchCounter] = true;
         done[pouchCounter] = micros() + calculatedInflate;
         digitalWrite(inflatePins[pouchCounter], HIGH);
       }
       else if (offset < 0) {
         // Small Inflate
         busy[pouchCounter] = true;
+        valve[pouchCounter] = true;
         done[pouchCounter] = micros() + minPouchDelay;
         digitalWrite(inflatePins[pouchCounter], HIGH);
       } // Assuming if its > 0 slow leak, do nothing
@@ -148,7 +160,7 @@ void loop() {
     if (protocolVersion == '1') {
       Serial.readBytesUntil('\n', &command, 1);
       if (command == '1') {
-        Serial.readBytesUntil('\n', messageBody, numPouches);
+        Serial.readBytesUntil('\n', messageBody, numPouches + 3);
         for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
           target[pouchCounter] = (messageBody[pouchCounter] - '0') * sensorScalar + sensorOffset;
         }
