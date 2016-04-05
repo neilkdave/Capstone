@@ -1,12 +1,13 @@
 const int motorControlPin = 38; // pumpEnable on breadboard // TODO: Remove after assembly 
 const int pumpEnable = 53; // pumpEnable on schematic
-const int numPouches = 13; // TODO: Change to 13?
+const int maxNumPouches = 15;
+const int numPouches = 13;
 const int pouchPinOffset = 22;
 const int minPouchDelay = 5400; // TODO: Verify this is smallest imperceptible delay 
 const int pressureReadPin = 14; // Breadboard pin 
 unsigned short currentTankPressure;
 unsigned long currentTime;
-unsigned long loopTime;
+unsigned long times[5];
 
 int current[numPouches] = {0};
 int target[numPouches] = {0};
@@ -26,7 +27,8 @@ bool inflating = false;
 
 int calculatedDeflate;
 int calculatedInflate;
-char messageBody[numPouches + 3];
+int messageBodyLength = maxNumPouches + 1; // The plus 1 is for the new line character at the end of the body
+char messageBody[messageBodyLength];
 char command;
 char protocolVersion;
 // TODO:  Populate pin arrays
@@ -98,9 +100,8 @@ void setup() {
 }
 
 void loop() {
+  times[0] = micros();
   currentTime = micros();
-  Serial.println(currentTime - loopTime);
-  loopTime = currentTime;
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // closes valves if done
     if (busy[pouchCounter] && (done[pouchCounter] < currentTime)) {
       busy[pouchCounter] = false;
@@ -112,7 +113,7 @@ void loop() {
       }
     }
   }
-
+  times[1] = micros();
   // Main inflation loop
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // inflates/deflates pouches
     if (!busy[pouchCounter]) {
@@ -141,6 +142,7 @@ void loop() {
       } // Assuming if its > 0 slow leak, do nothing
     }
   }
+  times[2] = micros();
 
   // Get tank pressure
   currentTankPressure = analogRead(pressureReadPin);
@@ -153,6 +155,7 @@ void loop() {
     digitalWrite(pumpEnable, HIGH);
   }
 
+  times[3] = micros();
   // Serial read/parse
   // TODO: Test
   while (Serial.available()) { // Parse serial until no serial left to read
@@ -160,14 +163,23 @@ void loop() {
     if (protocolVersion == '1') {
       Serial.readBytesUntil('\n', &command, 1);
       if (command == '1') {
-        Serial.readBytesUntil('\n', messageBody, numPouches + 3);
+        Serial.readBytesUntil('\n', messageBody, messageBodyLength);
         for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
           target[pouchCounter] = (messageBody[pouchCounter] - '0') * sensorScalar + sensorOffset;
         }
       }
     }
   }
-
-  //TIME LOOP Microseconds
+  times[4] = micros();
   
+  //*
+  Serial.print("Close Valves: ");
+  Serial.println(times[1] - times[0]);
+  Serial.print("Open Valves: ");
+  Serial.println(times[2] - times[1]);
+  Serial.print("Tank: ");
+  Serial.println(times[3] - times[2]);
+  Serial.print("Serial: ");
+  Serial.println(times[4] - times[3]);
+  //*/
 }
