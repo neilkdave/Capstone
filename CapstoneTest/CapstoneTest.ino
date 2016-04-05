@@ -27,7 +27,7 @@ bool inflating = false;
 
 int calculatedDeflate;
 int calculatedInflate;
-int messageBodyLength = maxNumPouches + 1; // The plus 1 is for the new line character at the end of the body
+const int messageBodyLength = maxNumPouches + 1; // The plus 1 is for the new line character at the end of the body
 char messageBody[messageBodyLength];
 char command;
 char protocolVersion;
