@@ -29,7 +29,7 @@ const int minTankPressure = 200;
 const int sensorOffset = 30;
 const int sensorScalar = 2;
 bool busy[numPouches];
-int done[numPouches];
+int done[numPouches]; // TODO: unsigned long?
 bool inflating = false;
 
 int calculatedDeflate;
@@ -38,8 +38,9 @@ int calculatedInflate;
 // Serial Variables
 const int maxMessageLength = maxNumPouches + 3; // 3 for version, type and newline
 char message[maxMessageLength];
-char protocolVersion = message[0];
-char messageType = message[1];
+char protocolVersion;
+char messageType;
+char messageValue;
 char* messageBody = &message[2]; // 2 for version and type
 const int messageBodyLength = maxNumPouches + 1; // 1 for newline
 
@@ -126,6 +127,24 @@ void setup() {
   Serial.println("Ready");
 }
 
+// void closeValves(int nextBlockingTime) {
+//   safeToContinue = false;
+//   do {
+//     currentTime = micros();
+//     nextDelay = done[0];
+//     for (int pouchCounter = 1; pouchCounter < numPouches; pouchCounter++) {
+//       nextDelay = min(nextDelay, done[pouchCounter]);
+//     }
+//     if (nextDelay - currentTime < nextBlockingTime) { // if we need to open before next blocking time
+//       // delay by microseconds // if neg, dont delay
+//       // close valves
+//     }
+//     else {
+//       safeToContinue = true;
+//     }
+//   } while(!safeToContinue);
+// }
+
 void loop() {
   times[0] = micros();
 
@@ -157,6 +176,7 @@ void loop() {
   // One:     32us
   // Worst:  480us
   
+  // closeValves(480);
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // Inflate and Deflates Pouches
     if (!busy[pouchCounter]) {
       current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]); // Read pressure measurements from pouches that are not busy 
@@ -187,6 +207,7 @@ void loop() {
   times[2] = micros();
 
   // Get tank pressure
+  // closeValves(100); // TODO: double check time
   currentTankPressure = analogRead(pressureReadPin);
   if (inflating && (currentTankPressure > maxTankPressure)) {
     inflating = false;
@@ -198,20 +219,30 @@ void loop() {
   }
 
   times[3] = micros();
+  // closeValves(550);
   bool found = false;
   while (Serial.available()) { // Parse serial until no serial left to read
     found = true;
-    Serial.readBytesUntil('\n', message, maxMessageLength);
-    if (protocolVersion == '1') {
-      if (messageType == '1') {
+//    Serial.readBytesUntil('\n', message, maxMessageLength);
+    Serial.readBytesUntil(0b11111111, message, maxMessageLength);
+    protocolVersion = (message[0] & 0b11000000) >> 6;
+    if (protocolVersion == 1) {
+      messageType = (message[0] & 0b00110000) >> 4;
+      if (messageType == 1) {
         for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-          target[pouchCounter] = (messageBody[pouchCounter] - '0') * sensorScalar + sensorOffset;
+          if (0b1 & pouchCounter) {
+            messageValue = (message[(pouchCounter + 1) / 2] & 0b01110000) >> 4;
+          }
+          else {
+            messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111); 
+          }
+          target[pouchCounter] = messageValue * sensorScalar + sensorOffset;
         }
       }
     }
   }
   times[4] = micros();
-  
+
 //  Serial.print("Close Valves: ");
 //  Serial.println(times[1] - times[0]);
 //  Serial.print("Open Valves: ");
@@ -221,8 +252,8 @@ void loop() {
 //  Serial.print("Serial: ");
 //  Serial.println(times[4] - times[3]);
   
-//  if (found) {
-//    Serial.print("Serial: ");
-//    Serial.println(times[4] - times[3]);
-//  }
+  // if (found) {
+  //   Serial.print("Serial: ");
+  //   Serial.println(times[4] - times[3]);
+  // }
 }
