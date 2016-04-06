@@ -280,4 +280,9 @@ void loop() {
 //  Serial.println(times[3] - times[2]);
 //  Serial.print("Close: ");
 //  Serial.println(times[4] - times[3]);
+//  Serial.print("Serial: ");
+//  Serial.println(times[5] - times[4]);
+//  Serial.print("Total: ");
+//  Serial.println(times[5] - times[0]);
+//  Serial.println("");
 }
