@@ -145,6 +145,14 @@ void setup() {
 //   } while(!safeToContinue);
 // }
 
+bool lessThan(unsigned long a, unsigned long b) {
+  return (a < b) ? (b - a < 2000000000) : (a - b > 2000000000); // 2 billion
+}
+
+bool greaterThan(unsigned long a, unsigned long b) {
+  return lessThan(b, a);
+}
+
 void loop() {
   times[0] = micros();
 
@@ -153,7 +161,7 @@ void loop() {
   // Worst: 140us
   currentTime = micros();
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-    if (busy[pouchCounter] && (done[pouchCounter] < currentTime)) {
+    if (busy[pouchCounter] && (done[pouchCounter] < currentTime)) { // 0 < current - done // (0 < (5 - 10)) || !((5 - 10) > 20000000000)
       busy[pouchCounter] = false;
       if (valve[pouchCounter]) {
         digitalWrite(inflatePins[pouchCounter], LOW);
@@ -175,7 +183,7 @@ void loop() {
   // Best:     0us
   // One:     32us
   // Worst:  480us
-  
+
   // closeValves(480);
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // Inflate and Deflates Pouches
     if (!busy[pouchCounter]) {
