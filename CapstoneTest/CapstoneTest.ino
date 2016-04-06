@@ -5,6 +5,7 @@ const unsigned char PS_64 = (1 << ADPS2) | (1 << ADPS1);
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
 const long baudRate = 115200;
+const unsigned long halfUnsignedLong = 2000000000;
 const int motorControlPin = 38; // pumpEnable on breadboard // TODO: Remove after assembly 
 const int pumpEnable = 53; // pumpEnable on schematic
 const int maxNumPouches = 15;
@@ -14,7 +15,7 @@ const int minPouchDelay = 5400; // TODO: Verify this is smallest imperceptible d
 const int pressureReadPin = 14; // Breadboard pin 
 unsigned short currentTankPressure;
 unsigned long currentTime;
-unsigned long times[5];
+unsigned long times[7];
 
 int current[numPouches] = {0};
 int target[numPouches] = {0};
@@ -127,26 +128,50 @@ void setup() {
   Serial.println("Ready");
 }
 
-// void closeValves(int nextBlockingTime) {
-//   safeToContinue = false;
-//   do {
-//     currentTime = micros();
-//     nextDelay = done[0];
-//     for (int pouchCounter = 1; pouchCounter < numPouches; pouchCounter++) {
-//       nextDelay = min(nextDelay, done[pouchCounter]);
-//     }
-//     if (nextDelay - currentTime < nextBlockingTime) { // if we need to open before next blocking time
-//       // delay by microseconds // if neg, dont delay
-//       // close valves
-//     }
-//     else {
-//       safeToContinue = true;
-//     }
-//   } while(!safeToContinue);
-// }
+bool safeToContinue;
+unsigned long nextClose;
+unsigned long delayTime;
+int toClose;
+void closeValves(int nextBlockingTime) {
+  do {
+    safeToContinue = true;
+    currentTime = micros();
+    for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
+      if (busy[pouchCounter]) {
+        if (safeToContinue) {
+          nextClose = done[pouchCounter];
+          toClose = pouchCounter;
+          safeToContinue = false;
+        }
+        else if (lessThan(done[pouchCounter], nextClose)) {
+          nextClose = done[pouchCounter];
+          toClose = pouchCounter;
+        }
+      }
+    }
+    if (!safeToContinue) {
+      delayTime = nextClose - currentTime;
+      if (lessThan(delayTime, nextBlockingTime)) {
+        if (delayTime < halfUnsignedLong) { // if legit delay
+          delayMicroseconds(delayTime); // maybe add an offset here
+        }
+        busy[toClose] = false;
+        if (valve[toClose]) {
+          digitalWrite(inflatePins[toClose], LOW);
+        }
+        else {
+          digitalWrite(deflatePins[toClose], LOW);
+        }
+      }
+      else {
+        safeToContinue = true;
+      }
+    }
+  } while(!safeToContinue);
+}
 
 bool lessThan(unsigned long a, unsigned long b) {
-  return (a < b) ? (b - a < 2000000000) : (a - b > 2000000000); // 2 billion
+  return (a < b) ? (b - a < halfUnsignedLong) : (a - b > halfUnsignedLong); // 2 billion
 }
 
 bool greaterThan(unsigned long a, unsigned long b) {
@@ -154,25 +179,6 @@ bool greaterThan(unsigned long a, unsigned long b) {
 }
 
 void loop() {
-  times[0] = micros();
-
-  // Close valves that are past their expiration
-  // Best:   6us
-  // Worst: 140us
-  currentTime = micros();
-  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-    if (busy[pouchCounter] && (done[pouchCounter] < currentTime)) { // 0 < current - done // (0 < (5 - 10)) || !((5 - 10) > 20000000000)
-      busy[pouchCounter] = false;
-      if (valve[pouchCounter]) {
-        digitalWrite(inflatePins[pouchCounter], LOW);
-      }
-      else {
-        digitalWrite(deflatePins[pouchCounter], LOW);
-      }
-    }
-  }
-  times[1] = micros();
-  
   // Main inflation loop
   // 128 ADC Scaler // Default
   // Best:     0us
@@ -184,8 +190,11 @@ void loop() {
   // One:     32us
   // Worst:  480us
 
-  // closeValves(480);
-  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // Inflate and Deflates Pouches
+  times[0] = micros();
+  closeValves(480); // TODO: verify this time is good
+  times[1] = micros();
+  // Open Valves
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     if (!busy[pouchCounter]) {
       current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]); // Read pressure measurements from pouches that are not busy 
       offset = target[pouchCounter] - current[pouchCounter]; // Either adjust currentReads to fit scale or adjust target to fit Scale 
@@ -212,10 +221,11 @@ void loop() {
       } // Assuming if its > 0 slow leak, do nothing
     }
   }
-  times[2] = micros();
 
+  times[2] = micros();
+  closeValves(60); // TODO: verify this time is good
+  times[3] = micros();
   // Get tank pressure
-  // closeValves(100); // TODO: double check time
   currentTankPressure = analogRead(pressureReadPin);
   if (inflating && (currentTankPressure > maxTankPressure)) {
     inflating = false;
@@ -226,12 +236,11 @@ void loop() {
     digitalWrite(pumpEnable, HIGH);
   }
 
-  times[3] = micros();
-  // closeValves(550);
-  bool found = false;
+  times[4] = micros();
+  closeValves(550); // TODO: verify this time is good
+  times[5] = micros();
+  // Read Serial
   while (Serial.available()) { // Parse serial until no serial left to read
-    found = true;
-//    Serial.readBytesUntil('\n', message, maxMessageLength);
     Serial.readBytesUntil(0b11111111, message, maxMessageLength);
     protocolVersion = (message[0] & 0b11000000) >> 6;
     if (protocolVersion == 1) {
@@ -249,19 +258,18 @@ void loop() {
       }
     }
   }
-  times[4] = micros();
+  times[6] = micros();
 
-//  Serial.print("Close Valves: ");
-//  Serial.println(times[1] - times[0]);
-//  Serial.print("Open Valves: ");
-//  Serial.println(times[2] - times[1]);
-//  Serial.print("Tank: ");
-//  Serial.println(times[3] - times[2]);
-//  Serial.print("Serial: ");
-//  Serial.println(times[4] - times[3]);
-  
-  // if (found) {
-  //   Serial.print("Serial: ");
-  //   Serial.println(times[4] - times[3]);
-  // }
+  Serial.print("Close: ");
+  Serial.println(times[1] - times[0]);
+  Serial.print("Open: ");
+  Serial.println(times[2] - times[1]);
+  Serial.print("Close: ");
+  Serial.println(times[3] - times[2]);
+  Serial.print("Tank: ");
+  Serial.println(times[4] - times[3]);
+  Serial.print("Close: ");
+  Serial.println(times[5] - times[4]);
+  Serial.print("Serial: ");
+  Serial.println(times[6] - times[5]);
 }
