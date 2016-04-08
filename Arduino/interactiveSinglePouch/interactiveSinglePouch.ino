@@ -5,15 +5,15 @@
  */
 
 int pressureReadPin = 14;
-const unsigned short maintainPressure = 250;
+const unsigned short maintainPressure = 100;
 
-const int motorControlPin = 36;
+const int motorControlPin = 38;
 
 char command[20];
 long val;
 
-const int inflatePin = 34;
-const int deflatePin = 35;
+const int inflatePin = 37;
+const int deflatePin = 36;
 
 unsigned long previousMillis = 0;
 unsigned long previousMotorChange = 0;
@@ -48,12 +48,10 @@ void loop() {
     }
     else
     {
-      Serial.println("Write High");
       digitalWrite(deflatePin, LOW);
       digitalWrite(inflatePin, HIGH);
       delay(val);
       digitalWrite(inflatePin, LOW);
-      Serial.println("Write Low");
     }
   }
   
