@@ -14,18 +14,14 @@ const int pumpPin = 53; // pumpEnable on schematic
 const int maxNumPouches = 15;
 const int numPouches = 13;
 const int pouchPinOffset = 22;
-const unsigned long minActuation = 5400; // TODO: Verify this is smallest imperceptible delay 
+const unsigned long minActuation = 4500; // TODO: Verify this is smallest imperceptible delay 
 const int inflateScalar = 1;
-const int deflateScalar = -20000;
+const long deflateScalar = -20000;
 const int settleTime = 8000;
 const int pressureReadPin = 14; // legitish
 unsigned short currentTankPressure;
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
-
-int current[numPouches] = {0};
-int target[numPouches] = {0};
-bool valve[numPouches];
 
 const int maxOffset = 8;
 const int minOffset = -8;
@@ -34,15 +30,19 @@ const int maxTankPressure = 325;
 const int minTankPressure = 275;
 
 const int sensorOffset = 60;
-const int sensorScalar = 15;
-bool isOpen[numPouches];
-bool isBusy[numPouches];
+const int sensorScalar = 24;
+bool isOpen[numPouches] = {false};
+bool isBusy[numPouches] = {false};
 unsigned long closeTime[numPouches];
 unsigned long doneTime[numPouches];
 bool inflating = false;
 
-unsigned int calculatedDeflate;
-unsigned int calculatedInflate;
+int current[numPouches] = {0};
+int target[numPouches] = {sensorOffset};
+bool valve[numPouches];
+
+long calculatedDeflate;
+long calculatedInflate;
 
 // Serial Variables
 const int maxMessageLength = (numPouches / 2) + 2; // 1 for version and type, 1 for newline
@@ -183,16 +183,16 @@ void closeValves(int nextBlockingTime) {
         }
       }
       else {
-        currentTime = micros();
         safeToContinue = true;
-        for (pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-          if ((isBusy[pouchCounter]) && (!isOpen[pouchCounter]) && (lessThan(doneTime[pouchCounter], currentTime))) {
-            isBusy[pouchCounter] = false;
-          }
-        }
       }
     }
   } while(!safeToContinue);
+  currentTime = micros();
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
+    if ((isBusy[pouchCounter]) && (!isOpen[pouchCounter]) && (lessThan(doneTime[pouchCounter], currentTime))) {
+      isBusy[pouchCounter] = false;
+    }
+  }
 }
 
 void loop() {
@@ -207,10 +207,17 @@ void loop() {
     if (!isBusy[pouchCounter]) {
       current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]);
       offset = target[pouchCounter] - current[pouchCounter];
+      Serial.print(pouchCounter);
+      Serial.print("  ");
+      Serial.println(offset);
       if (offset < minOffset) {
-        calculatedDeflate = offset * deflateScalar;
+        calculatedDeflate = (offset - minOffset) * deflateScalar;
+//        Serial.println(calculatedDeflate);
         calculatedDeflate /= target[pouchCounter] + current[pouchCounter];
+//        Serial.println(calculatedDeflate);
         calculatedDeflate += minActuation;
+//        Serial.println(calculatedDeflate);
+//        Serial.println("");
         isOpen[pouchCounter] = true;
         isBusy[pouchCounter] = true;
         valve[pouchCounter] = deflate;
@@ -228,15 +235,6 @@ void loop() {
         doneTime[pouchCounter] = closeTime[pouchCounter] + settleTime;
         digitalWrite(inflatePins[pouchCounter], HIGH);
       }
-//      else if (offset > 0) {
-//        // Small Inflate
-//        isOpen[pouchCounter] = true;
-//        isBusy[pouchCounter] = true;
-//        valve[pouchCounter] = inflate;
-//        closeTime[pouchCounter] = micros() + minActuation;
-//        doneTime[pouchCounter] = micros() + minPouchDelay;
-//        digitalWrite(inflatePins[pouchCounter], HIGH);
-//      }
     }
   }
   
@@ -261,10 +259,8 @@ void loop() {
   times[4] = micros();
   
   // Read Serial
-//  bool iFound = false;
-  while (Serial.available() > minMessageLength) { // Parse serial until no serial left to read
+  while (Serial.available() >= minMessageLength) { // Parse serial until no serial left to read
     Serial.readBytesUntil(0b11111111, message, maxMessageLength);
-//    iFound = true;
     protocolVersion = (message[0] & 0b11000000) >> 6;
     if (protocolVersion == 1) {
       messageType = (message[0] & 0b00110000) >> 4;
@@ -274,7 +270,7 @@ void loop() {
             messageValue = (message[(pouchCounter + 1) / 2] & 0b01110000) >> 4;
           }
           else {
-            messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111); 
+            messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111);
           }
           target[pouchCounter] = messageValue * sensorScalar + sensorOffset;
         }
