@@ -10,12 +10,14 @@ const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
 const unsigned long halfUnsignedLong = 2000000000;
 
-const int motorControlPin = 38; // pumpEnable on breadboard // TODO: Remove after assembly 
 const int pumpPin = 53; // pumpEnable on schematic
 const int maxNumPouches = 15;
 const int numPouches = 13;
 const int pouchPinOffset = 22;
-const unsigned long minPouchDelay = 5400; // TODO: Verify this is smallest imperceptible delay 
+const unsigned long minActuation = 5400; // TODO: Verify this is smallest imperceptible delay 
+const int inflateScalar = 1;
+const int deflateScalar = -20000;
+const int settleTime = 8000;
 const int pressureReadPin = 14; // legitish
 unsigned short currentTankPressure;
 unsigned long currentTime;
@@ -28,13 +30,15 @@ bool valve[numPouches];
 const int maxOffset = 8;
 const int minOffset = -8;
 int offset;
-const int maxTankPressure = 425;
-const int minTankPressure = 375;
+const int maxTankPressure = 325;
+const int minTankPressure = 275;
 
-const int sensorOffset = 40;
-const int sensorScalar = 7;
-bool busy[numPouches];
-unsigned long done[numPouches];
+const int sensorOffset = 60;
+const int sensorScalar = 15;
+bool isOpen[numPouches];
+bool isBusy[numPouches];
+unsigned long closeTime[numPouches];
+unsigned long doneTime[numPouches];
 bool inflating = false;
 
 unsigned int calculatedDeflate;
@@ -135,40 +139,40 @@ void setup() {
     pinMode(inflatePins[pouchCounter], OUTPUT);
     pinMode(deflatePins[pouchCounter], OUTPUT);
   }
-  pinMode(motorControlPin, OUTPUT);
+  pinMode(pumpPin, OUTPUT);
   Serial.println("Ready");
 }
 
 bool safeToContinue;
 unsigned long delayTime;
-unsigned long nextClose;
+unsigned long nextCloseTime;
 void closeValves(int nextBlockingTime) {
   do {
     safeToContinue = true;
     int pouchCounter;
     for (pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // 100us
-      if (busy[pouchCounter]) {
-        nextClose = done[pouchCounter];
+      if (isOpen[pouchCounter]) {
+        nextCloseTime = closeTime[pouchCounter];
         safeToContinue = false;
         break;
       }
     }
     if (!safeToContinue) {
       for ( ; pouchCounter < numPouches; pouchCounter++) {
-        if ((busy[pouchCounter]) && (lessThan(done[pouchCounter], nextClose))) {
-          nextClose = done[pouchCounter];
+        if ((isOpen[pouchCounter]) && (lessThan(closeTime[pouchCounter], nextCloseTime))) {
+          nextCloseTime = closeTime[pouchCounter];
         }
       }
       // Serial.println(micros() - currentTime);
       currentTime = micros();
-      delayTime = nextClose - currentTime;
+      delayTime = nextCloseTime - currentTime;
       if (lessThan(delayTime, nextBlockingTime)) {
         if (delayTime < halfUnsignedLong) {
           delayMicroseconds(delayTime); // TODO: add additional time here?
         }
         for (pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-          if ((busy[pouchCounter]) && (lessThan(done[pouchCounter], currentTime))) {
-            busy[pouchCounter] = false;
+          if ((isOpen[pouchCounter]) && (lessThan(closeTime[pouchCounter], currentTime))) {
+            isOpen[pouchCounter] = false;
             if (valve[pouchCounter] == inflate) {
               digitalWrite(inflatePins[pouchCounter], LOW);
             }
@@ -179,24 +183,19 @@ void closeValves(int nextBlockingTime) {
         }
       }
       else {
+        currentTime = micros();
         safeToContinue = true;
+        for (pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
+          if ((isBusy[pouchCounter]) && (!isOpen[pouchCounter]) && (lessThan(doneTime[pouchCounter], currentTime))) {
+            isBusy[pouchCounter] = false;
+          }
+        }
       }
     }
   } while(!safeToContinue);
 }
 
 void loop() {
-  // Main inflation loop
-  // 128 ADC Scaler // Default
-  // Best:     0us
-  // One:    130us
-  // Worst: 1640us
-  
-  // 16 ADC Scaler // Fastest
-  // Best:     0us
-  // One:     32us
-  // Worst:  480us
-
   times[0] = micros();
   
   closeValves(480);
@@ -205,30 +204,39 @@ void loop() {
   
   // Open Valves
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-    if (!busy[pouchCounter]) {
-      current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]); // Read pressure measurements from pouches that are not busy 
-      offset = target[pouchCounter] - current[pouchCounter]; // Either adjust currentReads to fit scale or adjust target to fit Scale 
-      if (offset > maxOffset) {
-        calculatedDeflate = 8000; // TODO: Define more concrete calculations 
-        busy[pouchCounter] = true;
+    if (!isBusy[pouchCounter]) {
+      current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]);
+      offset = target[pouchCounter] - current[pouchCounter];
+      if (offset < minOffset) {
+        calculatedDeflate = offset * deflateScalar;
+        calculatedDeflate /= target[pouchCounter] + current[pouchCounter];
+        calculatedDeflate += minActuation;
+        isOpen[pouchCounter] = true;
+        isBusy[pouchCounter] = true;
         valve[pouchCounter] = deflate;
-        done[pouchCounter] = micros() + calculatedDeflate;
+        closeTime[pouchCounter] = micros() + calculatedDeflate;
+        doneTime[pouchCounter] = closeTime[pouchCounter] + settleTime;
         digitalWrite(deflatePins[pouchCounter], HIGH);
       }
-      else if (offset < minOffset) {
-        calculatedInflate = 8000; // TODO: Define more concrete calculations 
-        busy[pouchCounter] = true;
+      else if (offset > 0) {
+        calculatedInflate = offset * (current[pouchCounter] + target[pouchCounter]) * inflateScalar;
+        calculatedInflate += minActuation;
+        isOpen[pouchCounter] = true;
+        isBusy[pouchCounter] = true;
         valve[pouchCounter] = inflate;
-        done[pouchCounter] = micros() + calculatedInflate;
+        closeTime[pouchCounter] = micros() + calculatedInflate;
+        doneTime[pouchCounter] = closeTime[pouchCounter] + settleTime;
         digitalWrite(inflatePins[pouchCounter], HIGH);
       }
-      else if (offset < 0) {
-        // Small Inflate
-        busy[pouchCounter] = true;
-        valve[pouchCounter] = inflate;
-        done[pouchCounter] = micros() + minPouchDelay;
-        digitalWrite(inflatePins[pouchCounter], HIGH);
-      } // Assuming if its > 0 slow leak, do nothing
+//      else if (offset > 0) {
+//        // Small Inflate
+//        isOpen[pouchCounter] = true;
+//        isBusy[pouchCounter] = true;
+//        valve[pouchCounter] = inflate;
+//        closeTime[pouchCounter] = micros() + minActuation;
+//        doneTime[pouchCounter] = micros() + minPouchDelay;
+//        digitalWrite(inflatePins[pouchCounter], HIGH);
+//      }
     }
   }
   
@@ -281,6 +289,8 @@ void loop() {
 //  Serial.println(times[2] - times[1]);
 //  Serial.print("Tank: ");
 //  Serial.println(times[3] - times[2]);
+//  Serial.print("currentTankPressure: ");
+//  Serial.println(currentTankPressure);
 //  Serial.print("Close: ");
 //  Serial.println(times[4] - times[3]);
 ////  if (iFound) {
