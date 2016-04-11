@@ -10,7 +10,7 @@ const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
 
 const unsigned long halfUnsignedLong = 2000000000;
 
-const int pumpPin = 53; // pumpEnable on schematic
+const int pumpPin = 53;
 const int maxNumPouches = 15;
 const int numPouches = 13;
 const int pouchPinOffset = 22;
@@ -18,7 +18,6 @@ const long minActuation = 4500; // TODO: Verify this is smallest imperceptible d
 const long inflateScalar = 1;
 const long deflateScalar = -60000;
 const int settleTime = 8000;
-const int pressureReadPin = 14; // legitish
 unsigned short currentTankPressure;
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
@@ -29,7 +28,7 @@ long offset;
 const int maxTankPressure = 325;
 const int minTankPressure = 275;
 
-const int sensorOffset = 40;
+int sensorOffset[numPouches];
 const int sensorScalar = 15;
 bool isOpen[numPouches] = {false};
 bool isBusy[numPouches] = {false};
@@ -94,6 +93,14 @@ const int deflatePins[] = {
   49 // Pouch #12
 };
 
+const int highPumpPin = 47;
+const int lowPumpPin = 48;
+const int highAmbientPin = 50;
+const int lowAmbientPin = 51;
+
+const int highSensorPin = 14;
+const int lowSensorPin = 15;
+
 const int pressureSensorPins[] = {
   1, // Pouch #0
   2, // Pouch #1
@@ -118,6 +125,37 @@ bool greaterThan(unsigned long a, unsigned long b) {
   return lessThan(b, a);
 }
 
+void calibrate() {
+  digitalWrite(pumpPin, LOW);
+  digitalWrite(highPumpPin, HIGH);
+  digitalWrite(lowPumpPin, HIGH);
+  digitalWrite(highAmbientPin, HIGH);
+  digitalWrite(lowAmbientPin, HIGH);
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
+    digitalWrite(deflatePins[pouchCounter], HIGH);
+  }
+  delay(3000);
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
+    sensorOffset[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]);
+  }
+  lowSensorOffset = analogRead(lowSensorPin);
+  highSensorOffset = analogRead(highSensorPin);
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
+    digitalWrite(deflatePins[pouchCounter], LOW);
+  }
+  digitalWrite(highPumpPin, LOW);
+  digitalWrite(lowPumpPin, LOW);
+  digitalWrite(highAmbientPin, LOW);
+  digitalWrite(lowAmbientPin, LOW);
+  delay(100);
+}
+// calibrate
+// drain tanks
+// open all low valves
+// read from each pressure sensor
+// close everything
+// neutral tank state
+
 void setup() {
   ADCSRA &= ~PS_128;  // Remove bits set by Arduino library
 
@@ -134,16 +172,25 @@ void setup() {
     ADCSRA |= PS_128; // 128 prescaler
   }
   
-  Serial.begin(baudRate);
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     pinMode(inflatePins[pouchCounter], OUTPUT);
     pinMode(deflatePins[pouchCounter], OUTPUT);
   }
+  
   pinMode(pumpPin, OUTPUT);
-  Serial.println("Ready");
+  pinMode(highPumpPin, OUTPUT);
+  pinMode(lowPumpPin, OUTPUT);
+  pinMode(highAmbientPin, OUTPUT);
+  pinMode(lowAmbientPin, OUTPUT);
+
+  calibrate();
+  
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
-    target[pouchCounter] = sensorOffset;
+    target[pouchCounter] = sensorOffset[pouchCounter];
   }
+
+  Serial.begin(baudRate);
+  Serial.println("Ready");
 }
 
 bool safeToContinue;
@@ -277,7 +324,7 @@ void loop() {
           else {
             messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111);
           }
-          target[pouchCounter] = messageValue * sensorScalar + sensorOffset;
+          target[pouchCounter] = messageValue * sensorScalar + sensorOffset[pouchCounter];
         }
       }
     }
