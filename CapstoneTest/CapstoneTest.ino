@@ -14,27 +14,23 @@ const int pumpPin = 53;
 const int maxNumPouches = 15;
 const int numPouches = 13;
 const int pouchPinOffset = 22;
-const long minActuation = 4500; // TODO: Verify this is smallest imperceptible delay 
-const long inflateScalar = 1;
+const long minActuation = 4300; // TODO: Verify this is smallest imperceptible delay 
+const long inflateScalar = 200;
 const long deflateScalar = -60000;
-const int settleTime = 8000;
-unsigned short currentTankPressure;
+const int settleTime = 7000;
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
 
 const int maxOffset = 8;
 const int minOffset = -8;
 long offset;
-const int maxTankPressure = 325;
-const int minTankPressure = 275;
 
 int sensorOffset[numPouches];
-const int sensorScalar = 15;
+const int sensorScalar = 12;
 bool isOpen[numPouches] = {false};
 bool isBusy[numPouches] = {false};
 unsigned long closeTime[numPouches];
 unsigned long doneTime[numPouches];
-bool inflating = false;
 
 long current[numPouches];
 long target[numPouches];
@@ -51,15 +47,30 @@ char protocolVersion;
 char messageType;
 char messageValue;
 
-// Tank Valves
-// 16
-// 17
-// 18
-// 19
+bool deflating;
+bool inflating;
+bool pumping;
+bool didPump;
+const unsigned long tankValveDelay = 8000;
+unsigned long tankDelayTime;
 
-// Tank Sensors
-// 14
-// 15
+const int highTankPin = 47;
+const int lowTankPin = 48;
+const int highAmbientPin = 50;
+const int lowAmbientPin = 51;
+
+const int highSensorPin = 14;
+const int lowSensorPin = 15;
+int lowSensorOffset;
+int highSensorOffset;
+
+int currentHighPressure;
+int currentLowPressure;
+
+const int maxHighPressure = 300;
+const int minHighPressure = 250;
+const int maxLowPressure = 150;
+const int minLowPressure = 100;
 
 const int inflatePins[] = {
   22, // Pouch #0
@@ -93,14 +104,6 @@ const int deflatePins[] = {
   49 // Pouch #12
 };
 
-const int highPumpPin = 47;
-const int lowPumpPin = 48;
-const int highAmbientPin = 50;
-const int lowAmbientPin = 51;
-
-const int highSensorPin = 14;
-const int lowSensorPin = 15;
-
 const int pressureSensorPins[] = {
   1, // Pouch #0
   2, // Pouch #1
@@ -127,14 +130,14 @@ bool greaterThan(unsigned long a, unsigned long b) {
 
 void calibrate() {
   digitalWrite(pumpPin, LOW);
-  digitalWrite(highPumpPin, HIGH);
-  digitalWrite(lowPumpPin, HIGH);
+  digitalWrite(highTankPin, HIGH);
+  digitalWrite(lowTankPin, HIGH);
   digitalWrite(highAmbientPin, HIGH);
   digitalWrite(lowAmbientPin, HIGH);
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     digitalWrite(deflatePins[pouchCounter], HIGH);
   }
-  delay(3000);
+  delay(5000);
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     sensorOffset[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]);
   }
@@ -143,8 +146,8 @@ void calibrate() {
   for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     digitalWrite(deflatePins[pouchCounter], LOW);
   }
-  digitalWrite(highPumpPin, LOW);
-  digitalWrite(lowPumpPin, LOW);
+  digitalWrite(highTankPin, LOW);
+  digitalWrite(lowTankPin, LOW);
   digitalWrite(highAmbientPin, LOW);
   digitalWrite(lowAmbientPin, LOW);
   delay(100);
@@ -178,10 +181,13 @@ void setup() {
   }
   
   pinMode(pumpPin, OUTPUT);
-  pinMode(highPumpPin, OUTPUT);
-  pinMode(lowPumpPin, OUTPUT);
+  pinMode(highTankPin, OUTPUT);
+  pinMode(lowTankPin, OUTPUT);
   pinMode(highAmbientPin, OUTPUT);
   pinMode(lowAmbientPin, OUTPUT);
+  
+  deflating = false;
+  inflating = false;
 
   calibrate();
   
@@ -200,7 +206,7 @@ void closeValves(int nextBlockingTime) {
   do {
     safeToContinue = true;
     int pouchCounter;
-    for (pouchCounter = 0; pouchCounter < 2; pouchCounter++) { // 100us
+    for (pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) { // 100us
       if (isOpen[pouchCounter]) {
         nextCloseTime = closeTime[pouchCounter];
         safeToContinue = false;
@@ -208,7 +214,7 @@ void closeValves(int nextBlockingTime) {
       }
     }
     if (!safeToContinue) {
-      for ( ; pouchCounter < 2; pouchCounter++) {
+      for ( ; pouchCounter < numPouches; pouchCounter++) {
         if ((isOpen[pouchCounter]) && (lessThan(closeTime[pouchCounter], nextCloseTime))) {
           nextCloseTime = closeTime[pouchCounter];
         }
@@ -220,7 +226,7 @@ void closeValves(int nextBlockingTime) {
         if (delayTime < halfUnsignedLong) {
           delayMicroseconds(delayTime); // TODO: add additional time here?
         }
-        for (pouchCounter = 0; pouchCounter < 2; pouchCounter++) {
+        for (pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
           if ((isOpen[pouchCounter]) && (lessThan(closeTime[pouchCounter], currentTime))) {
             isOpen[pouchCounter] = false;
             if (valve[pouchCounter] == inflate) {
@@ -238,7 +244,7 @@ void closeValves(int nextBlockingTime) {
     }
   } while(!safeToContinue);
   currentTime = micros();
-  for (int pouchCounter = 0; pouchCounter < 2; pouchCounter++) {
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     if ((isBusy[pouchCounter]) && (!isOpen[pouchCounter]) && (lessThan(doneTime[pouchCounter], currentTime))) {
       isBusy[pouchCounter] = false;
     }
@@ -253,33 +259,27 @@ void loop() {
   times[1] = micros();
   
   // Open Valves
-  for (int pouchCounter = 0; pouchCounter < 2; pouchCounter++) {
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
     if (!isBusy[pouchCounter]) {
       current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]);
       offset = target[pouchCounter] - current[pouchCounter];
-//      Serial.print(pouchCounter);
-//      Serial.print("  ");
-//      Serial.println(offset);
-      if (offset < minOffset) {
-        calculatedDeflate = (offset - minOffset) * deflateScalar;
-//        Serial.println(calculatedDeflate);
+      if (offset < 0) {
+        calculatedDeflate = offset * deflateScalar;
         calculatedDeflate /= target[pouchCounter] + current[pouchCounter];
-//        Serial.println(calculatedDeflate);
         calculatedDeflate += minActuation;
-//        Serial.println(calculatedDeflate);
-//        Serial.println("");
         isOpen[pouchCounter] = true;
         isBusy[pouchCounter] = true;
         valve[pouchCounter] = deflate;
-        Serial.println(calculatedDeflate);
+//        Serial.println(calculatedDeflate);
         closeTime[pouchCounter] = micros() + calculatedDeflate;
         doneTime[pouchCounter] = closeTime[pouchCounter] + settleTime;
         digitalWrite(deflatePins[pouchCounter], HIGH);
       }
-      else if (offset > 0) {
-        calculatedInflate = offset * (current[pouchCounter] + target[pouchCounter]) * inflateScalar;
+      else if (offset > maxOffset) {
+        calculatedInflate = (offset - maxOffset) * (current[pouchCounter] + target[pouchCounter]) * inflateScalar;
+        calculatedInflate /= currentHighPressure;
+//        Serial.println(calculatedInflate);
         calculatedInflate += minActuation;
-        Serial.println(calculatedInflate);
         isOpen[pouchCounter] = true;
         isBusy[pouchCounter] = true;
         valve[pouchCounter] = inflate;
@@ -292,16 +292,57 @@ void loop() {
   
   times[2] = micros();
   
-  // Get tank pressure
-  // 20us - 30us
-  currentTankPressure = analogRead(pressureReadPin);
-  if (inflating && (currentTankPressure > maxTankPressure)) {
-    inflating = false;
-    digitalWrite(pumpPin, LOW);
-  }
-  else if (!inflating && (currentTankPressure < minTankPressure)) {
+  currentHighPressure = analogRead(highSensorPin) - highSensorOffset;
+  currentLowPressure = analogRead(lowSensorPin) - lowSensorOffset;
+  if (!inflating && !deflating && (currentHighPressure < minHighPressure)) {
+    didPump = false;
+    pumping = false;
     inflating = true;
-    digitalWrite(pumpPin, HIGH);
+    digitalWrite(highTankPin, HIGH);
+    digitalWrite(lowAmbientPin, HIGH);
+    tankDelayTime = micros() + tankValveDelay;
+  }
+  else if (!inflating && !deflating && (currentLowPressure < minLowPressure)) {
+    didPump = false;
+    pumping = false;
+    deflating = true;
+    digitalWrite(lowTankPin, HIGH);
+    digitalWrite(highAmbientPin, HIGH);
+    tankDelayTime = micros() + tankValveDelay;
+  }
+  if (inflating) {
+    if (!pumping && !didPump && lessThan(tankDelayTime, currentTime)) {
+      pumping = true;
+      digitalWrite(pumpPin, HIGH);
+    }
+    else if (pumping && (currentHighPressure > maxHighPressure)) {
+      pumping = false;
+      didPump = true;
+      digitalWrite(pumpPin, LOW);
+      digitalWrite(highTankPin, LOW);
+      digitalWrite(lowAmbientPin, LOW);
+      tankDelayTime = micros() + tankValveDelay;
+    }
+    else if (!pumping && didPump && lessThan(tankDelayTime, currentTime)) {
+      inflating = false;
+    }
+  }
+  else if (deflating) {
+    if (!pumping && !didPump && lessThan(tankDelayTime, currentTime)) {
+      pumping = true;
+      digitalWrite(pumpPin, HIGH);
+    }
+    else if (pumping && (currentLowPressure > maxLowPressure)) {
+      pumping = false;
+      didPump = true;
+      digitalWrite(pumpPin, LOW);
+      digitalWrite(lowTankPin, LOW);
+      digitalWrite(highAmbientPin, LOW);
+      tankDelayTime = micros() + tankValveDelay;
+    }
+    else if (!pumping && didPump && lessThan(tankDelayTime, currentTime)) {
+      deflating = false;
+    }
   }
 
   times[3] = micros();
@@ -317,7 +358,7 @@ void loop() {
     if (protocolVersion == 1) {
       messageType = (message[0] & 0b00110000) >> 4;
       if (messageType == 1) {
-        for (int pouchCounter = 0; pouchCounter < 2; pouchCounter++) {
+        for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++) {
           if (0b1 & pouchCounter) {
             messageValue = (message[(pouchCounter + 1) / 2] & 0b01110000) >> 4;
           }
@@ -337,8 +378,6 @@ void loop() {
 //  Serial.println(times[2] - times[1]);
 //  Serial.print("Tank: ");
 //  Serial.println(times[3] - times[2]);
-//  Serial.print("currentTankPressure: ");
-//  Serial.println(currentTankPressure);
 //  Serial.print("Close: ");
 //  Serial.println(times[4] - times[3]);
 ////  if (iFound) {
