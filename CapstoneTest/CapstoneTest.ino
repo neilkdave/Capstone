@@ -12,17 +12,17 @@ const unsigned long halfUnsignedLong = 2000000000;
 
 const int pumpPin = 53;
 const int maxNumPouches = 15;
-const int numPouches = 13;
+const int numPouches = 5;
 const int pouchPinOffset = 22;
-const long minActuation = 4300; // TODO: Verify this is smallest imperceptible delay 
-const long inflateScalar = 200;
-const long deflateScalar = -60000;
+const long minActuation = 5500; // TODO: Verify this is smallest imperceptible delay 
+const long inflateScalar = 3;
+const long deflateScalar = -15000;
 const int settleTime = 7000;
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
 
-const int maxOffset = 8;
-const int minOffset = -8;
+const int maxOffset = 30;
+const int minOffset = -30;
 long offset;
 
 int sensorOffset[numPouches];
@@ -59,8 +59,8 @@ const int lowTankPin = 48;
 const int highAmbientPin = 50;
 const int lowAmbientPin = 51;
 
-const int highSensorPin = 14;
-const int lowSensorPin = 15;
+const int highSensorPin = 8;
+const int lowSensorPin = 7;
 int lowSensorOffset;
 int highSensorOffset;
 
@@ -106,18 +106,18 @@ const int deflatePins[] = {
 
 const int pressureSensorPins[] = {
   1, // Pouch #0
-  2, // Pouch #1
-  3, // Pouch #2
-  4, // Pouch #3
-  5, // Pouch #4
-  6, // Pouch #5
-  7, // Pouch #6
-  8, // Pouch #7
-  9, // Pouch #8
-  10, // Pouch #9
-  11, // Pouch #10
-  12, // Pouch #11
-  13 // Pouch #12
+  4, // Pouch #1
+  9, // Pouch #2
+  12, // Pouch #3
+  14, // Pouch #4
+  2, // Pouch #5
+  5, // Pouch #6
+  10, // Pouch #7
+  13, // Pouch #8
+  15, // Pouch #9
+  3, // Pouch #10
+  6, // Pouch #11
+  11 // Pouch #12
 };
 
 bool lessThan(unsigned long a, unsigned long b) {
@@ -274,6 +274,8 @@ void loop() {
         closeTime[pouchCounter] = micros() + calculatedDeflate;
         doneTime[pouchCounter] = closeTime[pouchCounter] + settleTime;
         digitalWrite(deflatePins[pouchCounter], HIGH);
+        //Serial.println("Deflate");
+        //Serial.println(calculatedDeflate);
       }
       else if (offset > maxOffset) {
         calculatedInflate = (offset - maxOffset) * (current[pouchCounter] + target[pouchCounter]) * inflateScalar;
@@ -286,6 +288,8 @@ void loop() {
         closeTime[pouchCounter] = micros() + calculatedInflate;
         doneTime[pouchCounter] = closeTime[pouchCounter] + settleTime;
         digitalWrite(inflatePins[pouchCounter], HIGH);
+        //Serial.println("Inflate");
+        //Serial.println(calculatedInflate);
       }
     }
   }
@@ -366,6 +370,7 @@ void loop() {
             messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111);
           }
           target[pouchCounter] = messageValue * sensorScalar + sensorOffset[pouchCounter];
+          Serial.println(target[pouchCounter]);
         }
       }
     }
