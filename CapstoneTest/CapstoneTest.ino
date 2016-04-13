@@ -12,17 +12,17 @@ const unsigned long halfUnsignedLong = 2000000000;
 
 const int pumpPin = 53;
 const int maxNumPouches = 15;
-const int numPouches = 5;
+const int numPouches = 4;
 const int pouchPinOffset = 22;
-const long minActuation = 5500; // TODO: Verify this is smallest imperceptible delay 
-const long inflateScalar = 3;
-const long deflateScalar = -15000;
+const long minActuation = 6000; // TODO: Verify this is smallest imperceptible delay 
+const long inflateScalar = 8;
+const long deflateScalar = -30000;
 const int settleTime = 7000;
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
 
-const int maxOffset = 30;
-const int minOffset = -30;
+const int maxOffset = 15;
+const int minOffset = -15;
 long offset;
 
 int sensorOffset[numPouches];
@@ -120,6 +120,69 @@ const int pressureSensorPins[] = {
   11 // Pouch #12
 };
 
+const long minInflateActuation[] = {
+  6000,
+  4300,
+  6000,
+  5000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000
+};
+
+const long minDeflateActuation[] = {
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000,
+  6000
+};
+
+const long inflateScalarArray[] = {
+    8,
+    8,
+    8,
+    15,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8
+};
+
+const long deflateScalarArray[] = {
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000,
+    -30000
+};
 bool lessThan(unsigned long a, unsigned long b) {
   return (a < b) ? (b - a < halfUnsignedLong) : (a - b > halfUnsignedLong);
 }
@@ -264,9 +327,11 @@ void loop() {
       current[pouchCounter] = analogRead(pressureSensorPins[pouchCounter]);
       offset = target[pouchCounter] - current[pouchCounter];
       if (offset < 0) {
-        calculatedDeflate = offset * deflateScalar;
+        //calculatedDeflate = offset * deflateScalar;
+        calculatedDeflate = offset * deflateScalarArray[pouchCounter];
         calculatedDeflate /= target[pouchCounter] + current[pouchCounter];
-        calculatedDeflate += minActuation;
+        //calculatedDeflate += minActuation;
+        calculatedDeflate += minDeflateActuation[pouchCounter];
         isOpen[pouchCounter] = true;
         isBusy[pouchCounter] = true;
         valve[pouchCounter] = deflate;
@@ -278,10 +343,12 @@ void loop() {
         //Serial.println(calculatedDeflate);
       }
       else if (offset > maxOffset) {
-        calculatedInflate = (offset - maxOffset) * (current[pouchCounter] + target[pouchCounter]) * inflateScalar;
+        //calculatedInflate = (offset - maxOffset) * (current[pouchCounter] + target[pouchCounter]) * inflateScalar;
+        calculatedInflate = (offset - maxOffset) * (current[pouchCounter] + target[pouchCounter]) * inflateScalarArray[pouchCounter];
         calculatedInflate /= currentHighPressure;
 //        Serial.println(calculatedInflate);
-        calculatedInflate += minActuation;
+        //calculatedInflate += minActuation;
+        calculatedInflate += minInflateActuation[pouchCounter];
         isOpen[pouchCounter] = true;
         isBusy[pouchCounter] = true;
         valve[pouchCounter] = inflate;
