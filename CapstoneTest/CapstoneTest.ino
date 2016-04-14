@@ -12,17 +12,17 @@ const unsigned long halfUnsignedLong = 2000000000;
 
 const int pumpPin = 53;
 const int maxNumPouches = 15;
-const int numPouches = 4;
-const int pouchPinOffset = 22;
+const int numPouches = 1;
+//const int pouchPinOffset = 22;
 const long minActuation = 6000; // TODO: Verify this is smallest imperceptible delay 
-const long inflateScalar = 8;
-const long deflateScalar = -30000;
-const int settleTime = 7000;
+//const long inflateScalar = 8;
+//const long deflateScalar = -30000;
+const int settleTime = 700000;
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
 
-const int maxOffset = 15;
-const int minOffset = -15;
+const int maxOffset = 30;
+const int minOffset = -30;
 long offset;
 
 int sensorOffset[numPouches];
@@ -82,10 +82,10 @@ const int inflatePins[] = {
   33, // Pouch #6
   21, // Pouch #7
   37, // Pouch #8
-  20, // Pouch #9
+  46, // Pouch #9
   38, // Pouch #10
   43, // Pouch #11
-  46 // Pouch #12
+  20 // Pouch #12
 };
 
 const int deflatePins[] = {
@@ -98,10 +98,10 @@ const int deflatePins[] = {
   35, // Pouch #6
   39, // Pouch #7
   36, // Pouch #8
-  41, // Pouch #9
+  49, // Pouch #9
   44, // Pouch #10
   45, // Pouch #11
-  49 // Pouch #12
+  41 // Pouch #12
 };
 
 const int pressureSensorPins[] = {
@@ -114,61 +114,62 @@ const int pressureSensorPins[] = {
   5, // Pouch #6
   10, // Pouch #7
   13, // Pouch #8
-  15, // Pouch #9
+  11, // Pouch #9
   3, // Pouch #10
   6, // Pouch #11
-  11 // Pouch #12
+  15 // Pouch #12
 };
 
-const long minInflateActuation[] = {
-  6000,
-  4300,
-  6000,
+long minInflateActuation[] = {
+  2000,
+  4000,
   5000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000
+  5000,
+  5000,
+  5000,
+  4000,
+  4000,
+  4000,
+  4000,
+  4000,
+  4000,
+  4000
 };
 
-const long minDeflateActuation[] = {
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000,
-  6000
+long minDeflateActuation[] = {
+  2000,
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000,  
+  4000    
 };
 
-const long inflateScalarArray[] = {
-    8,
-    8,
-    8,
-    15,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8
+long inflateScalarArray[] = {
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1,
+    1
+
 };
 
-const long deflateScalarArray[] = {
+long deflateScalarArray[] = {
     -30000,
     -30000,
     -30000,
@@ -259,7 +260,13 @@ void setup() {
   }
 
   Serial.begin(baudRate);
-  Serial.println("Ready");
+  //Serial.println("Ready");
+  
+  for (int pouchCounter = 0; pouchCounter < numPouches; pouchCounter++)
+  {
+    isBusy[pouchCounter] = true;
+    doneTime[pouchCounter] = micros() + 10000000;
+  }
 }
 
 bool safeToContinue;
@@ -437,7 +444,7 @@ void loop() {
             messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111);
           }
           target[pouchCounter] = messageValue * sensorScalar + sensorOffset[pouchCounter];
-          Serial.println(target[pouchCounter]);
+          //Serial.println(target[pouchCounter]);
         }
       }
     }
