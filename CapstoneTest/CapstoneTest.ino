@@ -12,21 +12,21 @@ const unsigned long halfUnsignedLong = 2000000000;
 
 const int pumpPin = 53;
 const int maxNumPouches = 15;
-const int numPouches = 1;
+const int numPouches = 9;
 //const int pouchPinOffset = 22;
 const long minActuation = 6000; // TODO: Verify this is smallest imperceptible delay 
 //const long inflateScalar = 8;
 //const long deflateScalar = -30000;
-const int settleTime = 700000;
+const int settleTime = 7000; // 8000
 unsigned long currentTime;
 unsigned long times[7]; // TODO: Delete after testing
 
-const int maxOffset = 30;
-const int minOffset = -30;
+const int maxOffset = 12;
+const int minOffset = -12;
 long offset;
 
 int sensorOffset[numPouches];
-const int sensorScalar = 12;
+const int sensorScalar = 15;
 bool isOpen[numPouches] = {false};
 bool isBusy[numPouches] = {false};
 unsigned long closeTime[numPouches];
@@ -67,8 +67,8 @@ int highSensorOffset;
 int currentHighPressure;
 int currentLowPressure;
 
-const int maxHighPressure = 300;
-const int minHighPressure = 250;
+const int maxHighPressure = 350;
+const int minHighPressure = 300;
 const int maxLowPressure = 150;
 const int minLowPressure = 100;
 
@@ -121,12 +121,12 @@ const int pressureSensorPins[] = {
 };
 
 long minInflateActuation[] = {
-  2000,
   4000,
-  5000,
-  5000,
-  5000,
-  5000,
+  4000,
+  4000,
+  4000,
+  4000,
+  4000,
   4000,
   4000,
   4000,
@@ -137,7 +137,7 @@ long minInflateActuation[] = {
 };
 
 long minDeflateActuation[] = {
-  2000,
+  4000,
   4000,  
   4000,  
   4000,  
@@ -153,36 +153,36 @@ long minDeflateActuation[] = {
 };
 
 long inflateScalarArray[] = {
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1,
-    1
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300,
+    300
 
 };
 
 long deflateScalarArray[] = {
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000,
-    -30000
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000,
+    -60000
 };
 bool lessThan(unsigned long a, unsigned long b) {
   return (a < b) ? (b - a < halfUnsignedLong) : (a - b > halfUnsignedLong);
