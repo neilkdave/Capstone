@@ -40,8 +40,8 @@ long calculatedDeflate;
 long calculatedInflate;
 
 // Serial Variables
-const int maxMessageLength = (numPouches / 2) + 2; // 1 for version and type, 1 for newline
-const int minMessageLength = (maxMessageLength);
+const int minMessageLength = (numPouches / 2) + 2; // 1 for version and type, 1 for newline
+const int maxMessageLength = minMessageLength;
 char message[maxMessageLength];
 char protocolVersion;
 char messageType;
@@ -49,6 +49,7 @@ char messageValue;
 
 bool deflating;
 bool inflating;
+bool inflatingAndDeflating;
 bool pumping;
 bool didPump;
 const unsigned long tankValveDelay = 8000;
@@ -67,8 +68,8 @@ int highSensorOffset;
 int currentHighPressure;
 int currentLowPressure;
 
-const int maxHighPressure = 350;
-const int minHighPressure = 300;
+const int maxHighPressure = 200;
+const int minHighPressure = 150;
 const int maxLowPressure = 150;
 const int minLowPressure = 100;
 
@@ -372,55 +373,33 @@ void loop() {
   
   currentHighPressure = analogRead(highSensorPin) - highSensorOffset;
   currentLowPressure = analogRead(lowSensorPin) - lowSensorOffset;
-  if (!inflating && !deflating && (currentHighPressure < minHighPressure)) {
-    didPump = false;
-    pumping = false;
-    inflating = true;
+  if ((currentHighPressure < maxHighPressure) && (currentLowPressure < maxLowPressure)) {
     digitalWrite(highTankPin, HIGH);
-    digitalWrite(lowAmbientPin, HIGH);
-    tankDelayTime = micros() + tankValveDelay;
+    digitalWrite(lowTankPin, HIGH);
+    digitalWrite(highAmbientPin, LOW);
+    digitalWrite(lowAmbientPin, LOW);
+    digitalWrite(pumpPin, HIGH);
   }
-  else if (!inflating && !deflating && (currentLowPressure < minLowPressure)) {
-    didPump = false;
-    pumping = false;
-    deflating = true;
+  else if (currentHighPressure < maxHighPressure) {
+    digitalWrite(highTankPin, HIGH);
+    digitalWrite(lowTankPin, LOW);
+    digitalWrite(highAmbientPin, LOW);
+    digitalWrite(lowAmbientPin, HIGH);
+    digitalWrite(pumpPin, HIGH);
+  }
+  else if (currentLowPressure < maxLowPressure) {
+    digitalWrite(highTankPin, LOW);
     digitalWrite(lowTankPin, HIGH);
     digitalWrite(highAmbientPin, HIGH);
-    tankDelayTime = micros() + tankValveDelay;
+    digitalWrite(lowAmbientPin, LOW);
+    digitalWrite(pumpPin, HIGH);
   }
-  if (inflating) {
-    if (!pumping && !didPump && lessThan(tankDelayTime, currentTime)) {
-      pumping = true;
-      digitalWrite(pumpPin, HIGH);
-    }
-    else if (pumping && (currentHighPressure > maxHighPressure)) {
-      pumping = false;
-      didPump = true;
-      digitalWrite(pumpPin, LOW);
-      digitalWrite(highTankPin, LOW);
-      digitalWrite(lowAmbientPin, LOW);
-      tankDelayTime = micros() + tankValveDelay;
-    }
-    else if (!pumping && didPump && lessThan(tankDelayTime, currentTime)) {
-      inflating = false;
-    }
-  }
-  else if (deflating) {
-    if (!pumping && !didPump && lessThan(tankDelayTime, currentTime)) {
-      pumping = true;
-      digitalWrite(pumpPin, HIGH);
-    }
-    else if (pumping && (currentLowPressure > maxLowPressure)) {
-      pumping = false;
-      didPump = true;
-      digitalWrite(pumpPin, LOW);
-      digitalWrite(lowTankPin, LOW);
-      digitalWrite(highAmbientPin, LOW);
-      tankDelayTime = micros() + tankValveDelay;
-    }
-    else if (!pumping && didPump && lessThan(tankDelayTime, currentTime)) {
-      deflating = false;
-    }
+  else {
+    digitalWrite(highTankPin, LOW);
+    digitalWrite(lowTankPin, LOW);
+    digitalWrite(highAmbientPin, LOW);
+    digitalWrite(lowAmbientPin, LOW);
+    digitalWrite(pumpPin, LOW);
   }
 
   times[3] = micros();
@@ -449,7 +428,7 @@ void loop() {
       }
     }
   }
-  times[5] = micros();
+  //times[5] = micros();
   
 //  Serial.print("Close: ");
 //  Serial.println(times[1] - times[0]);
