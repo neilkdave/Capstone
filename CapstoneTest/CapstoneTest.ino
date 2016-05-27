@@ -42,7 +42,11 @@ long calculatedInflate;
 // Serial Variables
 const int minMessageLength = (numPouches / 2) + 2; // 1 for version and type, 1 for newline
 const int maxMessageLength = minMessageLength;
-char message[maxMessageLength];
+char* message;
+const int serialBufferSize = 21;
+char serialBuffer[serialBufferSize];
+int filled = 0;
+  
 char protocolVersion;
 char messageType;
 char messageValue;
@@ -409,8 +413,37 @@ void loop() {
   times[4] = micros();
   
   // Read Serial
-  while (Serial.available() >= minMessageLength) { // Parse serial until no serial left to read
-    Serial.readBytesUntil(0b11111111, message, maxMessageLength);
+  int serialAvailable = Serial.available();
+  if (serialAvailable > 0) {
+    if (serialAvailable > serialBufferSize) { // doesnt fit
+      while (serialAvailable > serialBufferSize) {
+        Serial.readBytes(serialBuffer, min(serialAvailable - serialBufferSize, serialBufferSize));
+      }
+      Serial.readBytes(serialBuffer, serialBufferSize);
+      filled = serialBufferSize;
+    }
+    else if (serialAvailable <= serialBufferSize - filled) { // fits without shifting
+      Serial.readBytes(&serialBuffer[filled], serialAvailable);
+      filled += serialAvailable;
+    }
+    else { // fits after shifting
+      memcpy(serialBuffer, &serialBuffer[serialAvailable - (serialBufferSize - filled)], serialBufferSize - serialAvailable);
+      Serial.readBytes(&serialBuffer[serialBufferSize - serialAvailable], serialAvailable);
+      filled = serialBufferSize;
+    }
+  }
+  int pos;
+  int endPos = -1;
+  int startPos;
+  for (pos = filled - 1; pos >= maxMessageLength - 1; pos--) { // find a message
+    if ((0b11111111 & serialBuffer[pos]) == 0b11111111) {
+      endPos = pos;
+      startPos = pos - (maxMessageLength - 1);
+      pos = 0;
+    }
+  }
+  if (endPos != -1) { // found a message
+    message = &serialBuffer[startPos];
     protocolVersion = (message[0] & 0b11000000) >> 6;
     if (protocolVersion == 1) {
       messageType = (message[0] & 0b00110000) >> 4;
@@ -423,12 +456,14 @@ void loop() {
             messageValue = (message[(pouchCounter + 1) / 2] & 0b00000111);
           }
           target[pouchCounter] = messageValue * sensorScalar + sensorOffset[pouchCounter];
-          //Serial.println(target[pouchCounter]);
         }
       }
     }
+    filled = filled - endPos - 1;
+    memcpy(serialBuffer, &serialBuffer[endPos + 1], filled);
   }
-  //times[5] = micros();
+  
+  times[5] = micros();
   
 //  Serial.print("Close: ");
 //  Serial.println(times[1] - times[0]);
